@@ -43,8 +43,23 @@ Nix flake for [StreamController](https://github.com/StreamController/StreamContr
     enable = true;
 
     pages.main = {
+      brightness = { value = 100; overwrite = false; };
+      screensaver = { enable = true; timeout = 300; };
+      extraConfig.auto-change = { enable = false; };
+
       keys."0x0".states."0" = {
         label.center = { text = "Hello"; size = 14; color = "FFFFFFFF"; };
+        media = { path = "/path/to/icon.png"; size = 0.7; };
+        actions = [{ /* plugin-specific attrs */ }];
+      };
+
+      keys."1x0".states."0" = {
+        label.top = { text = "Sharpen"; };
+        label.center = { text = "+"; outline_width = 2; };
+        background = "FF0000FF";
+        image-control-action = 0;
+        label-control-actions = [ 0 0 0 ];
+        background-control-action = 0;
       };
     };
 
@@ -99,14 +114,75 @@ streamcontroller-cli --json device list
 
 ## Home Manager module options
 
+### Top-level options
+
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `programs.streamcontroller.enable` | bool | `false` | Enable declarative page management |
 | `programs.streamcontroller.package` | package | `streamcontroller` | Package to use |
 | `programs.streamcontroller.dataPath` | string | `$XDG_DATA_HOME/StreamController` | Data directory |
-| `programs.streamcontroller.pages` | attrsOf submodule | `{}` | Page definitions |
+| `programs.streamcontroller.pages` | lazyAttrsOf submodule | `{}` | Page definitions |
 | `programs.streamcontroller.defaultPages` | attrsOf string | `{}` | Device serial to default page mapping |
-| `programs.streamcontroller.extraCommands` | listOf string | `[]` | Extra CLI commands to run after config |
+| `programs.streamcontroller.extraCommands` | listOf string | `[]` | Extra shell commands to run after config |
+
+### Page submodule options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `keys` | lazyAttrsOf keySubmodule | `{}` | Key definitions (`COLxROW` coordinates) |
+| `brightness.value` | nullOr int | `null` | Page brightness (0-100) |
+| `brightness.overwrite` | bool | `false` | Whether to overwrite device brightness |
+| `screensaver` | nullOr attrs | `null` | Screensaver settings |
+| `extraConfig` | attrs | `{}` | Additional top-level page JSON attributes |
+
+### State submodule options (per key state)
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `label.{top,center,bottom}.text` | nullOr str | `null` | Label text |
+| `label.{top,center,bottom}.size` | nullOr int | `null` | Label font size |
+| `label.{top,center,bottom}.color` | nullOr str | `null` | Label colour (RRGGBBAA hex) |
+| `label.{top,center,bottom}.font-family` | nullOr str | `null` | Label font family |
+| `label.{top,center,bottom}.font-weight` | nullOr int | `null` | Label font weight |
+| `label.{top,center,bottom}.outline_width` | nullOr int | `null` | Label outline width (px) |
+| `media.path` | nullOr str | `null` | Path to media file |
+| `media.size` | nullOr (either int float) | `null` | Media size (px or scale factor) |
+| `media.valign` | nullOr str | `null` | Vertical alignment |
+| `background` | nullOr str | `null` | Background colour (hex RRGGBBAA) |
+| `actions` | listOf attrs | `[]` | Plugin-specific action definitions |
+| `image-control-action` | nullOr int | `0` | Image control action |
+| `label-control-actions` | listOf int | `[0 0 0]` | Label control actions (top, center, bottom) |
+| `background-control-action` | nullOr int | `0` | Background control action |
+
+### JSON output structure
+
+Pages are written to `<dataPath>/pages/<name>.json`. Default pages are written to `<dataPath>/settings/pages.json`.
+
+```json
+{
+  "brightness": { "value": 100, "overwrite": false },
+  "screensaver": { "enable": true, "timeout": 300 },
+  "auto-change": { "enable": false },
+  "keys": {
+    "0x0": {
+      "states": {
+        "0": {
+          "labels": {
+            "center": { "text": "Hello", "font-size": 14, "color": "FFFFFFFF" }
+          },
+          "media": { "path": "/nix/store/.../icon.png", "size": 0.7 },
+          "actions": [],
+          "image-control-action": 0,
+          "label-control-actions": [0, 0, 0],
+          "background-control-action": 0
+        }
+      }
+    }
+  }
+}
+```
+
+Only non-null label fields, media fields, and background are included. Entire label positions and media blocks are omitted when all fields are null.
 
 ## License
 

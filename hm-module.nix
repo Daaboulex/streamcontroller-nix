@@ -1,7 +1,7 @@
 # StreamController Home Manager module — declarative page and device configuration.
 #
 # Manages StreamController page JSON files declaratively and applies device
-# settings (brightness, active page) via the StreamController CLI at login.
+# settings (brightness, active page, defaults) via activation hooks.
 {
   config,
   lib,
@@ -15,87 +15,182 @@ let
   # or XDG_DATA_HOME/streamcontroller for native
   dataDir = cfg.dataPath;
 
+  # Filter out null values from an attrset (non-recursive)
+  filterNulls = lib.filterAttrs (_: v: v != null);
+
+  # Build a label position attrset, omitting null fields
+  mkLabelPos =
+    posCfg:
+    let
+      attrs = filterNulls {
+        inherit (posCfg) text;
+        font-size = posCfg.size;
+        inherit (posCfg) color;
+        inherit (posCfg) font-family;
+        inherit (posCfg) font-weight;
+        inherit (posCfg) outline_width;
+      };
+    in
+    if attrs == { } then null else attrs;
+
+  # Build media attrset, omitting null fields
+  mkMedia =
+    mediaCfg:
+    let
+      attrs = filterNulls {
+        inherit (mediaCfg) path size valign;
+      };
+    in
+    if attrs == { } then null else attrs;
+
   # Build page JSON files from Nix config
   mkPageFile =
     name: pageCfg:
     let
       keysJson = builtins.mapAttrs (_coord: keyCfg: {
-        states = builtins.mapAttrs (_stateId: stateCfg: {
-          labels = lib.filterAttrs (_: v: v != null) {
-            top = lib.optionalAttrs (stateCfg.labelTop != null) {
-              text = stateCfg.labelTop;
-              font-size = stateCfg.labelSize;
-              color = stateCfg.labelColor;
+        states = builtins.mapAttrs (
+          _stateId: stateCfg:
+          let
+            labels = filterNulls {
+              top = mkLabelPos stateCfg.label.top;
+              center = mkLabelPos stateCfg.label.center;
+              bottom = mkLabelPos stateCfg.label.bottom;
             };
-            center = lib.optionalAttrs (stateCfg.labelCenter != null) {
-              text = stateCfg.labelCenter;
-              font-size = stateCfg.labelSize;
-              color = stateCfg.labelColor;
-            };
-            bottom = lib.optionalAttrs (stateCfg.labelBottom != null) {
-              text = stateCfg.labelBottom;
-              font-size = stateCfg.labelSize;
-              color = stateCfg.labelColor;
-            };
-          };
-          media = lib.optionalAttrs (stateCfg.image != null) {
-            path = stateCfg.image;
-          };
-          background = lib.optionalAttrs (stateCfg.background != null) {
-            color = stateCfg.background;
-          };
-          inherit (stateCfg) actions;
-        }) keyCfg.states;
+            media = mkMedia stateCfg.media;
+          in
+          {
+            inherit (stateCfg) actions;
+            inherit (stateCfg) image-control-action;
+            inherit (stateCfg) label-control-actions;
+            inherit (stateCfg) background-control-action;
+          }
+          // (if labels != { } then { inherit labels; } else { })
+          // (if media != null then { inherit media; } else { })
+          // (lib.optionalAttrs (stateCfg.background != null) {
+            background.color = stateCfg.background;
+          })
+        ) keyCfg.states;
       }) pageCfg.keys;
 
       pageJson = {
         keys = keysJson;
-        settings = lib.filterAttrs (_: v: v != null) {
-          inherit (pageCfg) brightness;
-          inherit (pageCfg) screensaver;
-        };
       }
+      // (lib.optionalAttrs (pageCfg.brightness.value != null) {
+        brightness = filterNulls {
+          inherit (pageCfg.brightness) value overwrite;
+        };
+      })
+      // (lib.optionalAttrs (pageCfg.screensaver != null) {
+        inherit (pageCfg) screensaver;
+      })
       // pageCfg.extraConfig;
     in
     pkgs.writeText "streamcontroller-page-${name}.json" (builtins.toJSON pageJson);
 
-  # Generate page change commands for device defaults
-  defaultPageCmds = lib.mapAttrsToList (
-    serial: pageName:
-    "${cfg.package}/bin/streamcontroller --change-page ${serial} ${lib.escapeShellArg pageName}"
-  ) cfg.defaultPages;
+  # Build the default-pages JSON
+  defaultPagesJson = pkgs.writeText "streamcontroller-default-pages.json" (
+    builtins.toJSON { default-pages = cfg.defaultPages; }
+  );
+
+  labelPositionSubmodule = lib.types.submodule {
+    options = {
+      text = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Label text";
+      };
+      size = lib.mkOption {
+        type = lib.types.nullOr lib.types.int;
+        default = null;
+        description = "Label font size";
+      };
+      color = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Label colour as RRGGBBAA hex string";
+      };
+      font-family = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Label font family";
+      };
+      font-weight = lib.mkOption {
+        type = lib.types.nullOr lib.types.int;
+        default = null;
+        description = "Label font weight";
+      };
+      outline_width = lib.mkOption {
+        type = lib.types.nullOr lib.types.int;
+        default = null;
+        description = "Label outline width in pixels";
+      };
+    };
+  };
+
+  mediaSubmodule = lib.types.submodule {
+    options = {
+      path = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Path to media file (image/icon)";
+      };
+      size = lib.mkOption {
+        type = lib.types.nullOr (lib.types.either lib.types.int lib.types.float);
+        default = null;
+        description = "Media size (integer pixels or float scale factor)";
+      };
+      valign = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Vertical alignment of media";
+      };
+    };
+  };
+
+  brightnessSubmodule = lib.types.submodule {
+    options = {
+      value = lib.mkOption {
+        type = lib.types.nullOr lib.types.int;
+        default = null;
+        description = "Brightness value (0-100)";
+      };
+      overwrite = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Whether to overwrite device brightness";
+      };
+    };
+  };
 
   stateSubmodule = lib.types.submodule {
     options = {
-      labelTop = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Top label text";
+      label = lib.mkOption {
+        type = lib.types.submodule {
+          options = {
+            top = lib.mkOption {
+              type = labelPositionSubmodule;
+              default = { };
+              description = "Top label configuration";
+            };
+            center = lib.mkOption {
+              type = labelPositionSubmodule;
+              default = { };
+              description = "Center label configuration";
+            };
+            bottom = lib.mkOption {
+              type = labelPositionSubmodule;
+              default = { };
+              description = "Bottom label configuration";
+            };
+          };
+        };
+        default = { };
+        description = "Label configuration for each position (top, center, bottom)";
       };
-      labelCenter = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Center label text";
-      };
-      labelBottom = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Bottom label text";
-      };
-      labelSize = lib.mkOption {
-        type = lib.types.int;
-        default = 16;
-        description = "Label font size";
-      };
-      labelColor = lib.mkOption {
-        type = lib.types.str;
-        default = "255,255,255,255";
-        description = "Label colour as R,G,B,A";
-      };
-      image = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Path to button image";
+      media = lib.mkOption {
+        type = mediaSubmodule;
+        default = { };
+        description = "Media (image/icon) configuration";
       };
       background = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
@@ -107,13 +202,32 @@ let
         default = [ ];
         description = "List of action definitions (plugin-specific attrs)";
       };
+      image-control-action = lib.mkOption {
+        type = lib.types.nullOr lib.types.int;
+        default = 0;
+        description = "Image control action (0 = default)";
+      };
+      label-control-actions = lib.mkOption {
+        type = lib.types.listOf lib.types.int;
+        default = [
+          0
+          0
+          0
+        ];
+        description = "Label control actions for top, center, bottom";
+      };
+      background-control-action = lib.mkOption {
+        type = lib.types.nullOr lib.types.int;
+        default = 0;
+        description = "Background control action (0 = default)";
+      };
     };
   };
 
   keySubmodule = lib.types.submodule {
     options = {
       states = lib.mkOption {
-        type = lib.types.attrsOf stateSubmodule;
+        type = lib.types.lazyAttrsOf stateSubmodule;
         default = {
           "0" = { };
         };
@@ -125,22 +239,24 @@ let
   pageSubmodule = lib.types.submodule {
     options = {
       keys = lib.mkOption {
-        type = lib.types.attrsOf keySubmodule;
+        type = lib.types.lazyAttrsOf keySubmodule;
         default = { };
         example = {
           "0x0" = {
             states."0" = {
-              labelCenter = "Play";
-              image = "/path/to/play.png";
+              label.center = {
+                text = "Play";
+              };
+              media.path = "/path/to/play.png";
             };
           };
         };
         description = "Key definitions. Keys are coordinates as 'COLxROW' (e.g., '0x0', '1x2').";
       };
       brightness = lib.mkOption {
-        type = lib.types.nullOr lib.types.int;
-        default = null;
-        description = "Page brightness (0-100)";
+        type = brightnessSubmodule;
+        default = { };
+        description = "Page brightness settings";
       };
       screensaver = lib.mkOption {
         type = lib.types.nullOr lib.types.attrs;
@@ -150,7 +266,7 @@ let
       extraConfig = lib.mkOption {
         type = lib.types.attrs;
         default = { };
-        description = "Additional page JSON attributes merged at the top level";
+        description = "Additional page JSON attributes merged at the top level (e.g., auto-change)";
       };
     };
   };
@@ -173,7 +289,7 @@ in
 
     # Declarative pages
     pages = lib.mkOption {
-      type = lib.types.attrsOf pageSubmodule;
+      type = lib.types.lazyAttrsOf pageSubmodule;
       default = { };
       description = "Declarative page definitions. Keys are page names.";
     };
@@ -197,10 +313,12 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # Deploy declarative page files
-    home.activation.streamcontrollerPages = lib.mkIf (cfg.pages != { }) (
+    # Deploy declarative page files and default pages via activation hook
+    home.activation.streamcontrollerPages = lib.mkIf (cfg.pages != { } || cfg.defaultPages != { }) (
       lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         mkdir -p "${dataDir}/pages"
+        mkdir -p "${dataDir}/settings"
+
         ${lib.concatStringsSep "\n" (
           lib.mapAttrsToList (
             name: _pageCfg:
@@ -216,31 +334,36 @@ in
             ''
           ) cfg.pages
         )}
+
+        ${lib.optionalString (cfg.defaultPages != { }) ''
+          # Write default pages to settings
+          if ! cmp -s "${defaultPagesJson}" "${dataDir}/settings/pages.json" 2>/dev/null; then
+            cp "${defaultPagesJson}" "${dataDir}/settings/pages.json"
+            echo "StreamController: updated default pages"
+          fi
+        ''}
       ''
     );
 
-    # Apply device defaults after StreamController starts
-    systemd.user.services.streamcontroller-apply =
-      lib.mkIf (defaultPageCmds != [ ] || cfg.extraCommands != [ ])
-        {
-          Unit = {
-            Description = "Apply StreamController device configuration";
-            After = [ "graphical-session.target" ];
-          };
-          Service = {
-            Type = "oneshot";
-            RemainAfterExit = true;
-            # Wait for StreamController to be running
-            ExecStartPre = "${pkgs.coreutils}/bin/sleep 5";
-            ExecStart = pkgs.writeShellScript "streamcontroller-apply" ''
-              set -euo pipefail
-              ${lib.concatStringsSep "\n" (defaultPageCmds ++ cfg.extraCommands)}
-              echo "StreamController config applied"
-            '';
-          };
-          Install = {
-            WantedBy = [ "graphical-session.target" ];
-          };
-        };
+    # Run extra commands after StreamController starts (if any)
+    systemd.user.services.streamcontroller-apply = lib.mkIf (cfg.extraCommands != [ ]) {
+      Unit = {
+        Description = "Apply StreamController device configuration";
+        After = [ "graphical-session.target" ];
+      };
+      Service = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStartPre = "${pkgs.coreutils}/bin/sleep 5";
+        ExecStart = pkgs.writeShellScript "streamcontroller-apply" ''
+          set -euo pipefail
+          ${lib.concatStringsSep "\n" cfg.extraCommands}
+          echo "StreamController config applied"
+        '';
+      };
+      Install = {
+        WantedBy = [ "graphical-session.target" ];
+      };
+    };
   };
 }
