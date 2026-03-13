@@ -100,6 +100,13 @@ python3Packages.stdenv.mkDerivation {
     ./patches/native-linux.patch
   ];
 
+  postPatch = ''
+    # Fix: upstream references DeviceManager.USB_VID_ELGATO which doesn't exist —
+    # USB_VID_ELGATO is defined on USBVendorIDs, not DeviceManager.
+    # Replace with the literal Elgato USB vendor ID.
+    find . -name "*.py" -exec sed -i 's/DeviceManager.USB_VID_ELGATO/0x0fd9/g' {} +
+  '';
+
   dontBuild = true;
 
   installPhase = ''
