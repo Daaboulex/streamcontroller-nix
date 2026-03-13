@@ -1,0 +1,17 @@
+diff --git a/globals.py b/globals.py
+index 1111111..2222222 100644
+--- a/globals.py
++++ b/globals.py
+@@ -31,9 +31,11 @@ argparser.add_argument("app_args", nargs="*")
+
+ MAIN_PATH: str
+ VAR_APP_PATH = os.path.join(os.path.expanduser("~"), ".var", "app", "com.core447.StreamController")
++XDG_DATA_HOME = os.environ.get("XDG_DATA_HOME", os.path.join(os.path.expanduser("~"), ".local", "share"))
++NATIVE_DATA_PATH = os.path.join(XDG_DATA_HOME, "StreamController")
+ STATIC_SETTINGS_FILE_PATH = os.path.join(VAR_APP_PATH, "static", "settings.json")
+
+-DATA_PATH = os.path.join(VAR_APP_PATH, "data") # Maybe use XDG_DATA_HOME instead
++DATA_PATH = NATIVE_DATA_PATH if not os.path.isfile("/.flatpak-info") else os.path.join(VAR_APP_PATH, "data")
+ if argparser.parse_args().data:
+     DATA_PATH = argparser.parse_args().data
+ elif not argparser.parse_args().devel:
