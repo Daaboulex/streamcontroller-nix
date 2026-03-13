@@ -2,109 +2,247 @@
 
 Nix flake for [StreamController](https://github.com/StreamController/StreamController) — Elgato Stream Deck control application for Linux with plugin ecosystem.
 
-## Features
+## What it does
 
-- **Nix package** — StreamController de-Flatpaked for native Linux (GTK4/libadwaita, Pyro5 RPC, USB HID)
-- **CLI tool** — offline management of pages, buttons, plugins, devices, settings, and backups
-- **NixOS module** — system-level install with udev rules and optional autostart
-- **Home Manager module** — declarative page definitions, button configs, and device defaults
-- **Overlay** — drop-in for nixpkgs integration
+Packages StreamController (de-Flatpaked for native Linux) with a NixOS module for system-level setup and a Home Manager module for declarative page/button configuration. Includes a CLI tool for offline management and an export script for capturing existing settings as Nix.
 
-## Quick start
+The NixOS module handles package installation, udev rules for USB device access, and optional XDG autostart. The Home Manager module generates page JSON files from Nix attrsets, deploys custom assets, and maps devices to default pages.
 
-### Flake input
+### Supported devices
+
+All Elgato Stream Deck models are supported:
+
+| Model | Keys | Layout |
+|---|---|---|
+| Stream Deck Mini | 6 | 3x2 |
+| Stream Deck Mini MK.2 | 6 | 3x2 |
+| Stream Deck (Original) | 15 | 5x3 |
+| Stream Deck MK.2 | 15 | 5x3 |
+| Stream Deck XL | 32 | 8x4 |
+| Stream Deck XL V2 | 32 | 8x4 |
+| Stream Deck + (Plus) | 8 keys + 4 dials + touchscreen | 4x2 |
+| Stream Deck Pedal | 3 | 3x1 |
+| Stream Deck Neo | 8 + 2 touch buttons | 4x2 |
+
+### Key coordinate system
+
+Buttons are addressed as `COLxROW` (zero-indexed, top-left origin). For a 5x3 Stream Deck:
+
+```
+0x0  1x0  2x0  3x0  4x0
+0x1  1x1  2x1  3x1  4x1
+0x2  1x2  2x2  3x2  4x2
+```
+
+## Usage
+
+Add as a flake input:
 
 ```nix
-{
-  inputs.streamcontroller.url = "github:Daaboulex/streamcontroller-nix";
-}
+inputs.streamcontroller.url = "github:Daaboulex/streamcontroller-nix";
 ```
 
 ### NixOS module
 
 ```nix
-{ inputs, ... }: {
-  imports = [ inputs.streamcontroller.nixosModules.default ];
+imports = [ inputs.streamcontroller.nixosModules.default ];
 
-  programs.streamcontroller = {
-    enable = true;
-    autostart = true;  # XDG autostart entry
-  };
-}
+programs.streamcontroller = {
+  enable = true;
+  autostart = true;  # XDG autostart entry
+};
 ```
 
 ### Home Manager module
 
+Import in your Home Manager config:
+
 ```nix
-{ inputs, ... }: {
-  imports = [ inputs.streamcontroller.homeManagerModules.default ];
+# In your flake, add to Home Manager sharedModules:
+home-manager.sharedModules = [
+  inputs.streamcontroller.homeManagerModules.default
+];
+```
 
-  programs.streamcontroller = {
-    enable = true;
+### Example configuration
 
-    pages.main = {
-      brightness = { value = 100; overwrite = false; };
-      screensaver = { enable = true; timeout = 300; };
-      extraConfig.auto-change = { enable = false; };
+```nix
+programs.streamcontroller = {
+  enable = true;
 
-      keys."0x0".states."0" = {
-        label.center = { text = "Hello"; size = 14; color = "FFFFFFFF"; };
-        media = { path = "/path/to/icon.png"; size = 0.7; };
-        actions = [{ /* plugin-specific attrs */ }];
-      };
+  # Flatpak data directory (omit for native package default)
+  # dataPath = "${config.home.homeDirectory}/.var/app/com.core447.StreamController/data";
 
-      keys."1x0".states."0" = {
-        label.top = { text = "Sharpen"; };
-        label.center = { text = "+"; outline_width = 2; };
-        background = "FF0000FF";
-        image-control-action = 0;
-        label-control-actions = [ 0 0 0 ];
-        background-control-action = 0;
+  # Deploy custom icons to <dataPath>/assets/
+  assets = {
+    "goxlr-utility.png" = ./assets/goxlr-utility.png;
+    "crt-icon.png" = ./assets/crt-icon.png;
+  };
+
+  # Map device serial to default page
+  defaultPages."AL22K2C74512" = "Default";
+
+  pages = {
+    Default = {
+      brightness.value = 100;
+
+      keys = {
+        # Battery status (mouse)
+        "0x0".states."0".actions = [{
+          id = "com_core447_Battery::BatteryPercentage";
+          settings.device = "G502 LIGHTSPEED Wireless Gaming Mouse";
+        }];
+
+        # Run a shell command with custom icon
+        "1x1".states."0" = {
+          actions = [{
+            id = "com_core447_OSPlugin::RunCommand";
+            settings.command = "goxlr-toggle";
+          }];
+          media = {
+            path = "${config.programs.streamcontroller.dataPath}/assets/goxlr-utility.png";
+            size = 0.7;
+          };
+        };
+
+        # Media controls
+        "0x2".states."0".actions = [{
+          id = "com_core447_MediaPlugin::Previous";
+          settings = { show_label = true; show_thumbnail = true; };
+        }];
+        "1x2".states."0".actions = [{
+          id = "com_core447_MediaPlugin::PlayPause";
+          settings = { show_label = true; show_thumbnail = true; };
+        }];
+        "2x2".states."0".actions = [{
+          id = "com_core447_MediaPlugin::Next";
+          settings = { show_label = true; show_thumbnail = true; };
+        }];
       };
     };
 
-    defaultPages."AL12H34567" = "main";
+    # Second page with auto-change (activates when a window matches)
+    controls = {
+      brightness.value = 75;
+      extraConfig.auto-change = {
+        enable = true;
+        wm_class = "";
+        title = "";
+        stay_on_page = true;
+        decks = [ "AL22K2C74512" ];
+      };
+
+      keys = {
+        # Labeled button with keyboard shortcut
+        "0x0".states."0" = {
+          label.center.text = "Toggle";
+          actions = [{
+            id = "com_core447_OSPlugin::Hotkey";
+            settings.keys = [ [ 119 1 ] [ 119 0 ] ];  # F8 press/release
+          }];
+        };
+
+        # Labeled button pair (increment/decrement)
+        "0x1".states."0" = {
+          label = { top.text = "Volume"; center.text = "+"; };
+          actions = [{
+            id = "com_core447_OSPlugin::RunCommand";
+            settings.command = "volume-up";
+          }];
+        };
+        "1x1".states."0" = {
+          label = { top.text = "Volume"; center.text = "-"; };
+          actions = [{
+            id = "com_core447_OSPlugin::RunCommand";
+            settings.command = "volume-down";
+          }];
+        };
+
+        # Navigate back to Default page
+        "4x0".states."0".actions = [{
+          id = "com_core447_DeckPlugin::ChangePage";
+          settings = {
+            selected_page = "${config.programs.streamcontroller.dataPath}/pages/Default.json";
+            deck_number = "AL22K2C74512";
+          };
+        }];
+      };
+    };
   };
-}
+};
 ```
 
-### CLI usage
+### Action plugins
+
+Actions are plugin-specific attrsets with an `id` field and a `settings` attrset. Common built-in plugins:
+
+| Action ID | Description | Key settings |
+|---|---|---|
+| `com_core447_OSPlugin::RunCommand` | Run a shell command | `command`, `display_output`, `detached` |
+| `com_core447_OSPlugin::Hotkey` | Send keyboard shortcut | `keys` (list of [keycode, state] pairs) |
+| `com_core447_MediaPlugin::PlayPause` | Media play/pause | `show_label`, `show_thumbnail` |
+| `com_core447_MediaPlugin::Previous` | Media previous track | `show_label`, `show_thumbnail` |
+| `com_core447_MediaPlugin::Next` | Media next track | `show_label`, `show_thumbnail` |
+| `com_core447_Battery::BatteryPercentage` | Show device battery | `device` (device name string) |
+| `com_core447_DeckPlugin::ChangePage` | Switch Stream Deck page | `selected_page` (JSON path), `deck_number` (serial) |
+
+Additional plugins can be installed through StreamController's plugin system. Action IDs follow the pattern `<plugin_id>::<action_name>`.
+
+## CLI usage
+
+The `streamcontroller-cli` tool manages Stream Deck configuration offline (reads/writes JSON files directly, no daemon required):
 
 ```bash
-# List pages
+# Page management
 streamcontroller-cli page list
+streamcontroller-cli page create "My Page"
+streamcontroller-cli page inspect Default
+streamcontroller-cli page rename "Old Name" "New Name"
+streamcontroller-cli page duplicate Default --new-name "Default Copy"
+streamcontroller-cli page export Default backup.json
+streamcontroller-cli page import backup.json --name "Imported"
+streamcontroller-cli page delete "Old Page" --yes
 
-# Inspect a page
-streamcontroller-cli page inspect main
+# Button editing
+streamcontroller-cli button list Default
+streamcontroller-cli button set-label Default 0x0 --position center --text "Hello" --size 14
+streamcontroller-cli button set-image Default 1x1 --path /path/to/icon.png
+streamcontroller-cli button set-action Default 0x0 '{"id": "com_core447_OSPlugin::RunCommand", "settings": {"command": "echo hi"}}'
+streamcontroller-cli button add-action Default 0x0 '{"id": "...", "settings": {...}}'
+streamcontroller-cli button clear-label Default 0x0 --position center
+streamcontroller-cli button clear-image Default 0x0
+streamcontroller-cli button clear-actions Default 0x0
 
-# Create a backup
-streamcontroller-cli backup create
+# Device info
+streamcontroller-cli device list
+streamcontroller-cli device info AL22K2C74512
+streamcontroller-cli device models
 
-# Set button label
-streamcontroller-cli button set-label main 0x0 --position center --text "Hi"
+# Plugin inspection
+streamcontroller-cli plugin list
+streamcontroller-cli plugin info com_core447_OSPlugin
+streamcontroller-cli plugin search "media"
 
-# JSON output
+# Settings
+streamcontroller-cli settings show
+streamcontroller-cli settings set key.path value
+streamcontroller-cli settings get key.path
+streamcontroller-cli settings deck-brightness AL22K2C74512 75
+streamcontroller-cli settings default-page AL22K2C74512 Default
+
+# Backups
+streamcontroller-cli backup create --comment "before changes"
+streamcontroller-cli backup list
+streamcontroller-cli backup restore 2024-01-15_143000
+
+# JSON output mode (for scripting)
+streamcontroller-cli --json page list
 streamcontroller-cli --json device list
 ```
 
-## Packages
+## Options reference
 
-| Package | Description |
-|---|---|
-| `streamcontroller` | StreamController application (default) |
-| `streamcontroller-cli` | Offline CLI for managing Stream Deck configurations |
-
-## Outputs
-
-| Output | Description |
-|---|---|
-| `packages.x86_64-linux.streamcontroller` | Main application |
-| `packages.x86_64-linux.streamcontroller-cli` | CLI tool |
-| `nixosModules.default` | NixOS module (`programs.streamcontroller`) |
-| `homeManagerModules.default` | Home Manager module |
-| `overlays.default` | Nixpkgs overlay |
-
-## NixOS module options
+### NixOS module
 
 | Option | Type | Default | Description |
 |---|---|---|---|
@@ -112,21 +250,21 @@ streamcontroller-cli --json device list
 | `programs.streamcontroller.package` | package | `streamcontroller` | Package to use |
 | `programs.streamcontroller.autostart` | bool | `false` | Create XDG autostart entry |
 
-## Home Manager module options
+### Home Manager module
 
-### Top-level options
+#### Top-level options
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `programs.streamcontroller.enable` | bool | `false` | Enable declarative page management |
-| `programs.streamcontroller.package` | package | `streamcontroller` | Package to use |
-| `programs.streamcontroller.dataPath` | string | `$XDG_DATA_HOME/StreamController` | Data directory |
-| `programs.streamcontroller.pages` | lazyAttrsOf submodule | `{}` | Page definitions |
-| `programs.streamcontroller.defaultPages` | attrsOf string | `{}` | Device serial to default page mapping |
-| `programs.streamcontroller.assets` | attrsOf path | `{}` | Asset files copied to `<dataPath>/assets/` |
-| `programs.streamcontroller.extraCommands` | listOf string | `[]` | Extra shell commands to run after config |
+| `enable` | bool | `false` | Enable declarative page management |
+| `package` | package | `streamcontroller` | Package to use |
+| `dataPath` | string | `$XDG_DATA_HOME/StreamController` | Data directory |
+| `pages` | lazyAttrsOf submodule | `{}` | Page definitions |
+| `defaultPages` | attrsOf string | `{}` | Device serial to default page mapping |
+| `assets` | attrsOf path | `{}` | Asset files copied to `<dataPath>/assets/` |
+| `extraCommands` | listOf string | `[]` | Extra shell commands to run after config |
 
-### Page submodule options
+#### Page submodule
 
 | Option | Type | Default | Description |
 |---|---|---|---|
@@ -136,7 +274,7 @@ streamcontroller-cli --json device list
 | `screensaver` | nullOr attrs | `null` | Screensaver settings |
 | `extraConfig` | attrs | `{}` | Additional top-level page JSON attributes |
 
-### State submodule options (per key state)
+#### State submodule (per key state)
 
 | Option | Type | Default | Description |
 |---|---|---|---|
@@ -154,6 +292,24 @@ streamcontroller-cli --json device list
 | `image-control-action` | nullOr int | `0` | Image control action |
 | `label-control-actions` | listOf int | `[0 0 0]` | Label control actions (top, center, bottom) |
 | `background-control-action` | nullOr int | `0` | Background control action |
+
+All options under `programs.streamcontroller` are prefixed accordingly (e.g., `programs.streamcontroller.pages.main.keys."0x0".states."0".label.center.text`).
+
+### Assets
+
+Custom icons and images can be managed via the `assets` option. Files are copied to `<dataPath>/assets/` during activation, making them accessible from both native and Flatpak environments.
+
+```nix
+programs.streamcontroller = {
+  assets = {
+    "my-icon.png" = ./icons/my-icon.png;
+  };
+  pages.main.keys."0x0".states."0".media = {
+    path = "${config.programs.streamcontroller.dataPath}/assets/my-icon.png";
+    size = 0.7;
+  };
+};
+```
 
 ### JSON output structure
 
@@ -185,22 +341,6 @@ Pages are written to `<dataPath>/pages/<name>.json`. Default pages are written t
 
 Only non-null label fields, media fields, and background are included. Entire label positions and media blocks are omitted when all fields are null.
 
-### Assets
-
-Custom icons and images can be managed via the `assets` option. Files are copied to `<dataPath>/assets/` during activation, making them accessible from both native and Flatpak environments.
-
-```nix
-programs.streamcontroller = {
-  assets = {
-    "my-icon.png" = ./icons/my-icon.png;
-  };
-  pages.main.keys."0x0".states."0".media = {
-    path = "${config.programs.streamcontroller.dataPath}/assets/my-icon.png";
-    size = 0.7;
-  };
-};
-```
-
 ## Exporting current settings
 
 To generate Nix config from your current StreamController pages:
@@ -212,6 +352,37 @@ bash export-config.sh --data-dir ~/.var/app/com.core447.StreamController/data
 ```
 
 This reads all page JSONs and default page settings, then outputs valid Nix ready to paste into your `programs.streamcontroller` block. Requires `jq`.
+
+## Repository structure
+
+```
+streamcontroller-nix/
+├── flake.nix                  # Flake definition (packages, overlay, modules)
+├── package.nix                # StreamController application package
+├── module.nix                 # NixOS module (udev, autostart, systemPackages)
+├── hm-module.nix              # Home Manager module (declarative page config)
+├── export-config.sh           # Export current pages as Nix attrset
+├── patches/
+│   └── native-linux.patch     # De-Flatpak patch for native Linux
+├── cli/
+│   ├── package.nix            # CLI package definition
+│   ├── setup.py               # Python setuptools config
+│   └── cli_anything/
+│       └── streamcontroller/
+│           ├── streamcontroller_cli.py  # Click CLI entry point
+│           ├── core/                    # Business logic modules
+│           │   ├── config.py            # Data paths, deck models
+│           │   ├── pages.py             # Page file management
+│           │   ├── buttons.py           # Button editing
+│           │   ├── plugins.py           # Plugin inspection
+│           │   ├── devices.py           # Device info
+│           │   └── settings.py          # JSON settings CRUD
+│           ├── utils/
+│           │   └── output.py            # JSON/human output formatting
+│           └── tests/                   # 92 tests (unit + E2E)
+├── README.md
+└── LICENSE
+```
 
 ## License
 
