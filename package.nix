@@ -81,6 +81,8 @@ let
       textual
       typing-inspection
       urllib3
+      get-video-properties
+      imageio-ffmpeg
     ]
   );
 in
