@@ -304,6 +304,16 @@ in
       description = "Map of device serial numbers to their default page name.";
     };
 
+    # Asset files (icons, images) to copy into the data directory
+    assets = lib.mkOption {
+      type = lib.types.attrsOf lib.types.path;
+      default = { };
+      example = {
+        "my-icon.png" = ./icons/my-icon.png;
+      };
+      description = "Asset files to copy into the StreamController data directory. Keys are filenames, values are source paths. Files are placed at <dataPath>/assets/<key>.";
+    };
+
     # Extra commands to run after applying config
     extraCommands = lib.mkOption {
       type = lib.types.listOf lib.types.str;
@@ -313,37 +323,49 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # Deploy declarative page files and default pages via activation hook
-    home.activation.streamcontrollerPages = lib.mkIf (cfg.pages != { } || cfg.defaultPages != { }) (
-      lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        mkdir -p "${dataDir}/pages"
-        mkdir -p "${dataDir}/settings"
+    # Deploy assets and declarative page files via activation hook
+    home.activation.streamcontrollerPages =
+      lib.mkIf (cfg.pages != { } || cfg.defaultPages != { } || cfg.assets != { })
+        (
+          lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+            mkdir -p "${dataDir}/pages"
+            mkdir -p "${dataDir}/settings"
+            mkdir -p "${dataDir}/assets"
 
-        ${lib.concatStringsSep "\n" (
-          lib.mapAttrsToList (
-            name: _pageCfg:
-            let
-              pageFile = mkPageFile name _pageCfg;
-            in
-            ''
-              # Only overwrite if content changed (preserve manual edits if Nix config unchanged)
-              if ! cmp -s "${pageFile}" "${dataDir}/pages/${name}.json" 2>/dev/null; then
-                cp "${pageFile}" "${dataDir}/pages/${name}.json"
-                echo "StreamController: updated page '${name}'"
+            ${lib.concatStringsSep "\n" (
+              lib.mapAttrsToList (name: src: ''
+                if ! cmp -s "${src}" "${dataDir}/assets/${name}" 2>/dev/null; then
+                  cp "${src}" "${dataDir}/assets/${name}"
+                  echo "StreamController: updated asset '${name}'"
+                fi
+              '') cfg.assets
+            )}
+
+            ${lib.concatStringsSep "\n" (
+              lib.mapAttrsToList (
+                name: _pageCfg:
+                let
+                  pageFile = mkPageFile name _pageCfg;
+                in
+                ''
+                  # Only overwrite if content changed (preserve manual edits if Nix config unchanged)
+                  if ! cmp -s "${pageFile}" "${dataDir}/pages/${name}.json" 2>/dev/null; then
+                    cp "${pageFile}" "${dataDir}/pages/${name}.json"
+                    echo "StreamController: updated page '${name}'"
+                  fi
+                ''
+              ) cfg.pages
+            )}
+
+            ${lib.optionalString (cfg.defaultPages != { }) ''
+              # Write default pages to settings
+              if ! cmp -s "${defaultPagesJson}" "${dataDir}/settings/pages.json" 2>/dev/null; then
+                cp "${defaultPagesJson}" "${dataDir}/settings/pages.json"
+                echo "StreamController: updated default pages"
               fi
-            ''
-          ) cfg.pages
-        )}
-
-        ${lib.optionalString (cfg.defaultPages != { }) ''
-          # Write default pages to settings
-          if ! cmp -s "${defaultPagesJson}" "${dataDir}/settings/pages.json" 2>/dev/null; then
-            cp "${defaultPagesJson}" "${dataDir}/settings/pages.json"
-            echo "StreamController: updated default pages"
-          fi
-        ''}
-      ''
-    );
+            ''}
+          ''
+        );
 
     # Run extra commands after StreamController starts (if any)
     systemd.user.services.streamcontroller-apply = lib.mkIf (cfg.extraCommands != [ ]) {

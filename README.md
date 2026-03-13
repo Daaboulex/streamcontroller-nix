@@ -123,6 +123,7 @@ streamcontroller-cli --json device list
 | `programs.streamcontroller.dataPath` | string | `$XDG_DATA_HOME/StreamController` | Data directory |
 | `programs.streamcontroller.pages` | lazyAttrsOf submodule | `{}` | Page definitions |
 | `programs.streamcontroller.defaultPages` | attrsOf string | `{}` | Device serial to default page mapping |
+| `programs.streamcontroller.assets` | attrsOf path | `{}` | Asset files copied to `<dataPath>/assets/` |
 | `programs.streamcontroller.extraCommands` | listOf string | `[]` | Extra shell commands to run after config |
 
 ### Page submodule options
@@ -183,6 +184,34 @@ Pages are written to `<dataPath>/pages/<name>.json`. Default pages are written t
 ```
 
 Only non-null label fields, media fields, and background are included. Entire label positions and media blocks are omitted when all fields are null.
+
+### Assets
+
+Custom icons and images can be managed via the `assets` option. Files are copied to `<dataPath>/assets/` during activation, making them accessible from both native and Flatpak environments.
+
+```nix
+programs.streamcontroller = {
+  assets = {
+    "my-icon.png" = ./icons/my-icon.png;
+  };
+  pages.main.keys."0x0".states."0".media = {
+    path = "${config.programs.streamcontroller.dataPath}/assets/my-icon.png";
+    size = 0.7;
+  };
+};
+```
+
+## Exporting current settings
+
+To generate Nix config from your current StreamController pages:
+
+```bash
+bash export-config.sh > my-streamcontroller-config.nix
+# Or specify data directory:
+bash export-config.sh --data-dir ~/.var/app/com.core447.StreamController/data
+```
+
+This reads all page JSONs and default page settings, then outputs valid Nix ready to paste into your `programs.streamcontroller` block. Requires `jq`.
 
 ## License
 
