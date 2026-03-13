@@ -315,6 +315,13 @@ emit_key() {
   local pad
   pad=$(printf '%*s' "$indent_n" '')
 
+  # Skip keys with no states (empty JSON object {})
+  local has_states
+  has_states=$(echo "$key_json" | jq 'has("states")' 2>/dev/null)
+  if [[ $has_states != "true" ]]; then
+    return
+  fi
+
   echo "${pad}\"${coord}\" = {"
   echo "${pad}  states = {"
 
