@@ -67,6 +67,20 @@ let
       usb-monitor
       python-wayland-extra
       indexed-bzip2
+      opencv4
+      async-lru
+      bcrypt
+      blinker
+      cairocffi
+      fuzzywuzzy
+      levenshtein
+      nltk
+      pyclip
+      pyspellchecker
+      regex
+      textual
+      typing-inspection
+      urllib3
     ]
   );
 in
