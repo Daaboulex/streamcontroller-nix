@@ -88,6 +88,16 @@ let
       imageio-ffmpeg
       speedtest-cli
       pip
+      websockets
+      pygame
+      python-vlc
+      pyjwt
+      cryptography
+      redis
+      flask
+      python-osc
+      aiofiles
+      spotipy
     ]
   );
 in
