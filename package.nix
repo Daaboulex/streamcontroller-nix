@@ -158,14 +158,9 @@ python3Packages.stdenv.mkDerivation {
     StartupWMClass=streamcontroller
     EOF
 
-    # Icons - correctly follow the upstream Assets/icons structure
-    mkdir -p "$out/share/icons/hicolor/scalable/apps"
-    cp "Assets/icons/hicolor/scalable/apps/com.core447.StreamController.svg" "$out/share/icons/hicolor/scalable/apps/"
-
-    for size in 48 512; do
-      mkdir -p "$out/share/icons/hicolor/''${size}x''${size}/apps"
-      cp "Assets/icons/hicolor/''${size}x''${size}/apps/com.core447.StreamController.png" "$out/share/icons/hicolor/''${size}x''${size}/apps/"
-    done
+    # Icons - copy the entire hicolor directory from Assets
+    mkdir -p "$out/share/icons/hicolor"
+    cp -r Assets/icons/hicolor/* "$out/share/icons/hicolor/"
 
     # udev rules
     mkdir -p $out/lib/udev/rules.d
