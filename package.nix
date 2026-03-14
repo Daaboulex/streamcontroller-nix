@@ -65,7 +65,6 @@ let
       imageio
       pyperclip
       rapidfuzz
-      streamcontroller-plugin-tools
       streamcontroller-streamdeck
       usb-monitor
       python-wayland-extra
@@ -98,6 +97,12 @@ let
       python-osc
       aiofiles
       spotipy
+      (streamcontroller-plugin-tools.overridePythonAttrs (old: {
+        postPatch = (old.postPatch or "") + ''
+          substituteInPlace streamcontroller_plugin_tools/installation_helpers.py \
+            --replace-fail 'create(path, with_pip=True)' 'create(path, system_site_packages=True, with_pip=True)'
+        '';
+      }))
     ]
   );
 in
