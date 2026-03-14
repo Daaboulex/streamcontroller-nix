@@ -9,7 +9,7 @@
   gobject-introspection,
   gtk4,
   libadwaita,
-  webkitgtk_6,
+  webkitgtk_6_0,
   glib,
   cairo,
   pango,
@@ -103,7 +103,7 @@ python3Packages.stdenv.mkDerivation {
   buildInputs = [
     gtk4
     libadwaita
-    webkitgtk_6
+    webkitgtk_6_0
     glib
     cairo
     pango
@@ -163,8 +163,8 @@ python3Packages.stdenv.mkDerivation {
     cp "Assets/icons/hicolor/scalable/apps/com.core447.StreamController.svg" "$out/share/icons/hicolor/scalable/apps/"
 
     for size in 48 512; do
-      mkdir -p "$out/share/icons/hicolor/''${size}x''${size}/apps"
-      cp "Assets/icons/hicolor/''${size}x''${size}/apps/com.core447.StreamController.png" "$out/share/icons/hicolor/''${size}x''${size}/apps/"
+      mkdir -p "$out/share/icons/hicolor/${size}x${size}/apps"
+      cp "Assets/icons/hicolor/${size}x${size}/apps/com.core447.StreamController.png" "$out/share/icons/hicolor/${size}x${size}/apps/"
     done
 
     # udev rules
