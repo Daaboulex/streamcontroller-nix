@@ -99,10 +99,29 @@ let
       spotipy
       (streamcontroller-plugin-tools.overridePythonAttrs (old: {
         postPatch = (old.postPatch or "") + ''
-          substituteInPlace streamcontroller_plugin_tools/installation_helpers.py \
-            --replace-fail 'create(path, with_pip=True)' 'create(path, system_site_packages=True, with_pip=True)'
+                    cat > streamcontroller_plugin_tools/installation_helpers.py <<'EOF'
+          import os
+          import sys
+          from subprocess import run
+
+          def create_venv(path: str = ".venv", path_to_requirements_txt: str = None) -> None:
+              print(f"Executing virtualenv with {sys.executable} for {path}")
+              res = run([sys.executable, "-m", "virtualenv", "--system-site-packages", str(path)])
+              if res.returncode != 0:
+                  print(f"Virtualenv creation failed for {path}")
+              
+              if path_to_requirements_txt is None:
+                  return
+              
+              # Use full path to pip inside venv and avoid 'source'
+              pip_path = os.path.join(path, "bin", "pip")
+              cmd = f"{pip_path} install -r {path_to_requirements_txt}"
+              print(f"Running pip install: {cmd}")
+              run(cmd, shell=True)
+          EOF
         '';
       }))
+      virtualenv
     ]
   );
 in
@@ -143,6 +162,14 @@ python3Packages.stdenv.mkDerivation {
     # USB_VID_ELGATO is defined on USBVendorIDs, not DeviceManager.
     # Replace with the literal Elgato USB vendor ID.
     find . -name "*.py" -exec sed -i 's/DeviceManager.USB_VID_ELGATO/0x0fd9/g' {} +
+
+    # Bypass venv activation and use venv python directly in backends.
+    # This avoids bash sourcing issues in the Nix environment.
+    for file in src/backend/PluginManager/PluginBase.py src/backend/PluginManager/ActionCore.py; do
+      substituteInPlace $file \
+        --replace-fail 'if venv_path is not None:' 'if False: # Nix: bypassed activate' \
+        --replace-fail 'python3 {backend_path}' '{venv_path + "/bin/python3" if venv_path else "python3"} {backend_path}'
+    done
   '';
 
   dontBuild = true;
