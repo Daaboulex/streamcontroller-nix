@@ -187,8 +187,7 @@ python3Packages.stdenv.mkDerivation {
   '';
 
   preFixup = ''
-    makeWrapperArgs+=(
-      "''${gappsWrapperArgs[@]}"
+    gappsWrapperArgs+=(
       --prefix LD_LIBRARY_PATH : "${
         lib.makeLibraryPath [
           libusb1
@@ -199,7 +198,12 @@ python3Packages.stdenv.mkDerivation {
           libpulseaudio
         ]
       }"
-      --prefix PATH : "${lib.makeBinPath [ ffmpeg ]}"
+      --prefix PATH : "${
+        lib.makeBinPath [
+          ffmpeg
+          python
+        ]
+      }"
     )
   '';
 
