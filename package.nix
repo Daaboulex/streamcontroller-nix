@@ -2,12 +2,14 @@
 # Python GTK4/libadwaita application with plugin ecosystem and Pyro5 RPC.
 {
   lib,
+  stdenv,
   python3Packages,
   fetchFromGitHub,
   wrapGAppsHook4,
   gobject-introspection,
   gtk4,
   libadwaita,
+  webkitgtk_6,
   glib,
   cairo,
   pango,
@@ -83,6 +85,8 @@ let
       urllib3
       get-video-properties
       imageio-ffmpeg
+      speedtest-cli
+      pip
     ]
   );
 in
@@ -99,6 +103,7 @@ python3Packages.stdenv.mkDerivation {
   buildInputs = [
     gtk4
     libadwaita
+    webkitgtk_6
     glib
     cairo
     pango
@@ -176,6 +181,8 @@ python3Packages.stdenv.mkDerivation {
           libusb1
           hidapi
           libevdev
+          glib
+          stdenv.cc.cc.lib
         ]
       }"
       --prefix PATH : "${lib.makeBinPath [ ffmpeg ]}"
