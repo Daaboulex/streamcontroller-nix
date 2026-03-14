@@ -20,6 +20,7 @@
   libevdev,
   libportal,
   pulseaudio,
+  libpulseaudio,
   ffmpeg,
 }:
 let
@@ -114,6 +115,7 @@ python3Packages.stdenv.mkDerivation {
     libevdev
     libportal
     pulseaudio
+    libpulseaudio
     python
   ];
 
@@ -179,6 +181,7 @@ python3Packages.stdenv.mkDerivation {
           libevdev
           glib
           stdenv.cc.cc.lib
+          libpulseaudio
         ]
       }"
       --prefix PATH : "${lib.makeBinPath [ ffmpeg ]}"
