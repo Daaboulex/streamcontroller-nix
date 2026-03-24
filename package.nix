@@ -22,6 +22,7 @@
   pulseaudio,
   libpulseaudio,
   ffmpeg,
+  kdotool,
 }:
 let
   version = "1.5.0-beta.14";
@@ -228,6 +229,7 @@ python3Packages.stdenv.mkDerivation {
       --prefix PATH : "${
         lib.makeBinPath [
           ffmpeg
+          kdotool
           python
         ]
       }"
