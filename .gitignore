@@ -2,3 +2,9 @@ result
 .direnv
 __pycache__/
 .pre-commit-config.yaml
+
+# AI tracking (local only)
+AI-progress.json
+AI-tasks.json
+result-*
+.envrc

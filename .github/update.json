@@ -1,0 +1,17 @@
+{
+  "package": "streamcontroller",
+  "upstream": {
+    "type": "github-release",
+    "owner": "StreamController",
+    "repo": "StreamController"
+  },
+  "packageFile": "package.nix",
+  "hashes": [
+    "hash"
+  ],
+  "verify": {
+    "binary": null,
+    "args": null,
+    "check": "desktop"
+  }
+}

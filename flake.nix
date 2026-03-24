@@ -3,29 +3,63 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    git-hooks = {
+      url = "github:cachix/git-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
     {
       self,
       nixpkgs,
+      git-hooks,
     }:
     let
-      system = "x86_64-linux";
-      pkgs = nixpkgs.legacyPackages.${system};
+      systems = [ "x86_64-linux" ];
+      forAllSystems = nixpkgs.lib.genAttrs systems;
     in
     {
-      packages.${system} = {
-        default = self.packages.${system}.streamcontroller;
-        streamcontroller = pkgs.callPackage ./package.nix { };
-        streamcontroller-cli = pkgs.callPackage ./cli/package.nix { };
+      packages = forAllSystems (
+        system:
+        let
+          pkgs = import nixpkgs { localSystem.system = system; };
+        in
+        {
+          streamcontroller = pkgs.callPackage ./package.nix { };
+          streamcontroller-cli = pkgs.callPackage ./cli/package.nix { };
+          default = self.packages.${system}.streamcontroller;
+        }
+      );
+
+      overlays.default = final: _prev: {
+        inherit (self.packages.${final.system}) streamcontroller;
       };
 
       nixosModules.default = import ./module.nix;
       homeManagerModules.default = import ./hm-module.nix;
 
-      overlays.default = final: _prev: {
-        inherit (self.packages.${final.system}) streamcontroller;
-      };
+      formatter = forAllSystems (system: nixpkgs.legacyPackages.${system}.nixfmt-rfc-style);
+
+      checks = forAllSystems (system: {
+        pre-commit-check = git-hooks.lib.${system}.run {
+          src = self;
+          hooks.nixfmt-rfc-style.enable = true;
+        };
+      });
+
+      devShells = forAllSystems (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        {
+          default = pkgs.mkShell {
+            inherit (self.checks.${system}.pre-commit-check) shellHook;
+            buildInputs = self.checks.${system}.pre-commit-check.enabledPackages;
+            packages = with pkgs; [ nil ];
+          };
+        }
+      );
     };
 }
