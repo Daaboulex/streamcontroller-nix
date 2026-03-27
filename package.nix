@@ -171,6 +171,13 @@ python3Packages.stdenv.mkDerivation {
         --replace-fail 'if venv_path is not None:' 'if False: # Nix: bypassed activate' \
         --replace-fail 'python3 {backend_path}' '{venv_path + "/bin/python3" if venv_path else "python3"} {backend_path}'
     done
+
+    # Disable the app's built-in autostart mechanism on native installs.
+    # NixOS module.nix and Home Manager handle autostart properly —
+    # the app's mechanism copies desktop files to ~/.config/autostart/
+    # which conflicts with declarative management.
+    substituteInPlace autostart.py \
+      --replace-fail 'setup_autostart_desktop_entry(True, True)' 'return  # Nix: autostart handled by NixOS/HM'
   '';
 
   dontBuild = true;
@@ -233,6 +240,7 @@ python3Packages.stdenv.mkDerivation {
           python
         ]
       }"
+      --set GSK_RENDERER ngl
     )
   '';
 

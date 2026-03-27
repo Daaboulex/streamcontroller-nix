@@ -4,8 +4,17 @@ import os
 import json
 
 
-DEFAULT_DATA_PATH = os.path.expanduser(
+_XDG_DATA_HOME = os.environ.get(
+    "XDG_DATA_HOME", os.path.join(os.path.expanduser("~"), ".local", "share")
+)
+_FLATPAK_DATA_PATH = os.path.expanduser(
     "~/.var/app/com.core447.StreamController/data"
+)
+_NATIVE_DATA_PATH = os.path.join(_XDG_DATA_HOME, "StreamController")
+
+# Use native XDG path unless running inside Flatpak
+DEFAULT_DATA_PATH = (
+    _FLATPAK_DATA_PATH if os.path.isfile("/.flatpak-info") else _NATIVE_DATA_PATH
 )
 STATIC_SETTINGS_PATH = os.path.expanduser(
     "~/.var/app/com.core447.StreamController/static/settings.json"
