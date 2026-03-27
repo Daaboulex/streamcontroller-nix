@@ -323,6 +323,36 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    # Migrate runtime data from old Flatpak path to native XDG path (one-time)
+    home.activation.streamcontrollerMigrate = lib.hm.dag.entryBefore [ "streamcontrollerPages" ] (
+      let
+        oldDir = "${config.home.homeDirectory}/.var/app/com.core447.StreamController/data";
+        marker = "${dataDir}/.migrated-from-flatpak";
+      in
+      ''
+        if [ -d "${oldDir}" ] && [ ! -f "${marker}" ] && [ "${oldDir}" != "${dataDir}" ]; then
+          echo "StreamController: migrating data from Flatpak path to native path"
+          mkdir -p "${dataDir}"
+
+          # Move runtime directories (skip pages — HM manages those declaratively)
+          for dir in plugins settings cache Store icons wallpapers sd_plus_bar_wallpapers logs; do
+            if [ -d "${oldDir}/$dir" ] && [ ! -d "${dataDir}/$dir" ]; then
+              cp -a "${oldDir}/$dir" "${dataDir}/$dir"
+              echo "StreamController: migrated $dir/"
+            fi
+          done
+
+          # Copy skip-onboarding marker if present
+          if [ -f "${oldDir}/.skip-onboarding" ] && [ ! -f "${dataDir}/.skip-onboarding" ]; then
+            cp "${oldDir}/.skip-onboarding" "${dataDir}/.skip-onboarding"
+          fi
+
+          touch "${marker}"
+          echo "StreamController: migration complete (old data preserved at ${oldDir})"
+        fi
+      ''
+    );
+
     # Deploy assets and declarative page files via activation hook
     home.activation.streamcontrollerPages =
       lib.mkIf (cfg.pages != { } || cfg.defaultPages != { } || cfg.assets != { })
@@ -335,7 +365,7 @@ in
             ${lib.concatStringsSep "\n" (
               lib.mapAttrsToList (name: src: ''
                 if ! cmp -s "${src}" "${dataDir}/assets/${name}" 2>/dev/null; then
-                  cp "${src}" "${dataDir}/assets/${name}"
+                  install -m 644 "${src}" "${dataDir}/assets/${name}"
                   echo "StreamController: updated asset '${name}'"
                 fi
               '') cfg.assets
@@ -350,7 +380,7 @@ in
                 ''
                   # Only overwrite if content changed (preserve manual edits if Nix config unchanged)
                   if ! cmp -s "${pageFile}" "${dataDir}/pages/${name}.json" 2>/dev/null; then
-                    cp "${pageFile}" "${dataDir}/pages/${name}.json"
+                    install -m 644 "${pageFile}" "${dataDir}/pages/${name}.json"
                     echo "StreamController: updated page '${name}'"
                   fi
                 ''
@@ -360,7 +390,7 @@ in
             ${lib.optionalString (cfg.defaultPages != { }) ''
               # Write default pages to settings
               if ! cmp -s "${defaultPagesJson}" "${dataDir}/settings/pages.json" 2>/dev/null; then
-                cp "${defaultPagesJson}" "${dataDir}/settings/pages.json"
+                install -m 644 "${defaultPagesJson}" "${dataDir}/settings/pages.json"
                 echo "StreamController: updated default pages"
               fi
             ''}
