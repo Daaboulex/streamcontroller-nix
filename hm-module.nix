@@ -323,6 +323,19 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    # Patch OSPlugin UInput to exclude system power keys.
+    # The upstream OSPlugin creates UInput({ecodes.EV_KEY: range(0, 300), ...})
+    # which includes KEY_POWER(116), KEY_SLEEP(142), KEY_WAKEUP(143), KEY_SUSPEND(205).
+    # systemd-logind monitors these keys and can trigger session actions on spurious events.
+    # This activation hook patches the installed plugin to use a safe key list.
+    home.activation.streamcontrollerPatchPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      _os_plugin="${dataDir}/plugins/com_core447_OSPlugin/main.py"
+      if [ -f "$_os_plugin" ] && grep -q 'range(0, 300)' "$_os_plugin"; then
+        ${pkgs.gnused}/bin/sed -i 's/ecodes\.EV_KEY: range(0, 300)/ecodes.EV_KEY: [k for k in range(0, 300) if k not in {116, 142, 143, 205}]/' "$_os_plugin"
+        echo "StreamController: patched OSPlugin UInput to exclude system power keys"
+      fi
+    '';
+
     # Migrate runtime data from old Flatpak path to native XDG path (one-time)
     home.activation.streamcontrollerMigrate = lib.hm.dag.entryBefore [ "streamcontrollerPages" ] (
       let
