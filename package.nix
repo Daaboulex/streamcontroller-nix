@@ -159,25 +159,37 @@ python3Packages.stdenv.mkDerivation {
   ];
 
   postPatch = ''
-    # Fix: upstream references DeviceManager.USB_VID_ELGATO which doesn't exist —
-    # USB_VID_ELGATO is defined on USBVendorIDs, not DeviceManager.
-    # Replace with the literal Elgato USB vendor ID.
-    find . -name "*.py" -exec sed -i 's/DeviceManager.USB_VID_ELGATO/0x0fd9/g' {} +
+        # Fix: upstream references DeviceManager.USB_VID_ELGATO which doesn't exist —
+        # USB_VID_ELGATO is defined on USBVendorIDs, not DeviceManager.
+        # Replace with the literal Elgato USB vendor ID.
+        find . -name "*.py" -exec sed -i 's/DeviceManager.USB_VID_ELGATO/0x0fd9/g' {} +
 
-    # Bypass venv activation and use venv python directly in backends.
-    # This avoids bash sourcing issues in the Nix environment.
-    for file in src/backend/PluginManager/PluginBase.py src/backend/PluginManager/ActionCore.py; do
-      substituteInPlace $file \
-        --replace-fail 'if venv_path is not None:' 'if False: # Nix: bypassed activate' \
-        --replace-fail 'python3 {backend_path}' '{venv_path + "/bin/python3" if venv_path else "python3"} {backend_path}'
-    done
+        # Bypass venv activation for backends — use Nix-wrapped Python directly.
+        # Upstream does `. venv/bin/activate && python3 backend.py` which fails on
+        # NixOS because venv pythons hardcode store paths that break on updates.
+        # Instead, skip activation and inject venv site-packages via PYTHONPATH
+        # so plugin pip dependencies are still found.
+        for file in src/backend/PluginManager/PluginBase.py src/backend/PluginManager/ActionCore.py; do
+          substituteInPlace $file \
+            --replace-fail 'if venv_path is not None:' 'if False: # Nix: bypassed activate'
+        done
 
-    # Disable the app's built-in autostart mechanism on native installs.
-    # NixOS module.nix and Home Manager handle autostart properly —
-    # the app's mechanism copies desktop files to ~/.config/autostart/
-    # which conflicts with declarative management.
-    substituteInPlace autostart.py \
-      --replace-fail 'setup_autostart_desktop_entry(True, True)' 'return  # Nix: autostart handled by NixOS/HM'
+        # Inject venv site-packages via PYTHONPATH instead of venv activation
+        substituteInPlace src/backend/PluginManager/PluginBase.py \
+          --replace-fail 'log.info(f"Launching backend: {command}")' \
+    'if venv_path and os.path.isdir(venv_path or ""):
+                import glob
+                sp = glob.glob(os.path.join(venv_path, "lib", "python*", "site-packages"))
+                if sp:
+                    command = f"PYTHONPATH={sp[0]}:$PYTHONPATH " + command
+            log.info(f"Launching backend: {command}")'
+
+        # Disable the app's built-in autostart mechanism on native installs.
+        # NixOS module.nix and Home Manager handle autostart properly —
+        # the app's mechanism copies desktop files to ~/.config/autostart/
+        # which conflicts with declarative management.
+        substituteInPlace autostart.py \
+          --replace-fail 'setup_autostart_desktop_entry(True, True)' 'return  # Nix: autostart handled by NixOS/HM'
   '';
 
   dontBuild = true;
