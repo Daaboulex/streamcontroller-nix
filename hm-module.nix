@@ -323,6 +323,29 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    # Recreate broken plugin venvs after Python updates.
+    # NixOS Python updates change store paths, breaking venv symlinks.
+    # This rebuilds any venv whose python3 is missing.
+    home.activation.streamcontrollerFixVenvs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      _plugins="${dataDir}/plugins"
+      if [ -d "$_plugins" ]; then
+        for venv in "$_plugins"/*/.venv; do
+          [ -d "$venv" ] || continue
+          if [ ! -f "$venv/bin/python3" ]; then
+            _plugin="$(basename "$(dirname "$venv")")"
+            echo "StreamController: recreating broken venv for $_plugin"
+            rm -rf "$venv"
+            _req="$(dirname "$venv")/requirements.txt"
+            if [ -f "$_req" ]; then
+              ${cfg.package}/bin/streamcontroller --help >/dev/null 2>&1 || true
+              ${pkgs.python3}/bin/python3 -m virtualenv --system-site-packages "$venv" 2>/dev/null || true
+              "$venv/bin/pip" install -r "$_req" 2>/dev/null || true
+            fi
+          fi
+        done
+      fi
+    '';
+
     # Migrate runtime data from old Flatpak path to native XDG path (one-time)
     home.activation.streamcontrollerMigrate = lib.hm.dag.entryBefore [ "streamcontrollerPages" ] (
       let
