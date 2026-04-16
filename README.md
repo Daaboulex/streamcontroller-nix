@@ -1,5 +1,7 @@
 # streamcontroller-nix
 
+[![CI](https://github.com/Daaboulex/streamcontroller-nix/actions/workflows/ci.yml/badge.svg)](https://github.com/Daaboulex/streamcontroller-nix/actions/workflows/ci.yml)
+
 Nix flake for [StreamController](https://github.com/StreamController/StreamController) — Elgato Stream Deck control application for Linux with plugin ecosystem.
 
 ## What it does
