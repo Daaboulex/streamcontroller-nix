@@ -1,6 +1,11 @@
 # streamcontroller-nix
 
 [![CI](https://github.com/Daaboulex/streamcontroller-nix/actions/workflows/ci.yml/badge.svg)](https://github.com/Daaboulex/streamcontroller-nix/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/Daaboulex/streamcontroller-nix)](./LICENSE)
+[![NixOS](https://img.shields.io/badge/NixOS-unstable-78C0E8?logo=nixos&logoColor=white)](https://nixos.org)
+[![Last commit](https://img.shields.io/github/last-commit/Daaboulex/streamcontroller-nix)](https://github.com/Daaboulex/streamcontroller-nix/commits)
+[![Stars](https://img.shields.io/github/stars/Daaboulex/streamcontroller-nix?style=flat)](https://github.com/Daaboulex/streamcontroller-nix/stargazers)
+[![Issues](https://img.shields.io/github/issues/Daaboulex/streamcontroller-nix)](https://github.com/Daaboulex/streamcontroller-nix/issues)
 
 Nix flake for [StreamController](https://github.com/StreamController/StreamController) — Elgato Stream Deck control application for Linux with plugin ecosystem.
 
