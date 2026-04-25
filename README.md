@@ -9,6 +9,26 @@
 
 Nix flake for [StreamController](https://github.com/StreamController/StreamController) — Elgato Stream Deck control application for Linux with plugin ecosystem.
 
+## Upstream
+
+This is a **Nix packaging wrapper** — not the original project. All credit for StreamController goes to:
+
+- **Author**: [Core447 / StreamController org](https://github.com/StreamController)
+- **Repository**: [github.com/StreamController/StreamController](https://github.com/StreamController/StreamController)
+- **License**: [GPL-3.0-only](https://github.com/StreamController/StreamController/blob/main/LICENSE)
+
+Tracks GitHub releases. Daily upstream check at 06:00 UTC.
+
+## Components
+
+| Component | Type | Description |
+|---|---|---|
+| `streamcontroller` | package | StreamController app (de-Flatpaked native Linux build via `patches/native-linux.patch`) |
+| `streamcontroller-cli` | package | Offline CLI (Click + Python) for page/button/device/plugin management |
+| `nixosModules.default` | NixOS module | `programs.streamcontroller` — package install + udev rules + optional XDG autostart |
+| `homeManagerModules.default` | HM module | Declarative `programs.streamcontroller.pages.*` config — emits page JSON, deploys assets, maps device serials to default pages |
+| `export-config.sh` | shell script | Reads existing page JSONs and emits a ready-to-paste `programs.streamcontroller` Nix attrset |
+
 ## What it does
 
 Packages StreamController (de-Flatpaked for native Linux) with a NixOS module for system-level setup and a Home Manager module for declarative page/button configuration. Includes a CLI tool for offline management and an export script for capturing existing settings as Nix.
@@ -391,6 +411,21 @@ streamcontroller-nix/
 └── LICENSE
 ```
 
+## Development
+
+```bash
+git clone https://github.com/Daaboulex/streamcontroller-nix
+cd streamcontroller-nix
+nix develop                          # enter dev shell, installs pre-commit hooks
+nix fmt                              # format flake + module + hm-module
+nix flake check --no-build           # eval check
+nix build .#streamcontroller         # build the desktop app
+nix build .#streamcontroller-cli     # build the offline CLI
+./result/bin/streamcontroller --help # binary verify (or run `streamcontroller-cli`)
+```
+
+CI runs the same chain daily via `.github/workflows/update.yml`; manual updates rarely needed.
+
 ## License
 
-GPL-3.0-only
+This packaging flake is [GPL-3.0-only](./LICENSE) licensed (matches upstream). Upstream StreamController is [GPL-3.0-only](https://github.com/StreamController/StreamController/blob/main/LICENSE).
