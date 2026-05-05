@@ -1,23 +1,21 @@
 # streamcontroller-nix
 
-[![CI](https://github.com/Daaboulex/streamcontroller-nix/actions/workflows/ci.yml/badge.svg)](https://github.com/Daaboulex/streamcontroller-nix/actions/workflows/ci.yml)
-[![License](https://img.shields.io/github/license/Daaboulex/streamcontroller-nix)](./LICENSE)
-[![NixOS](https://img.shields.io/badge/NixOS-unstable-78C0E8?logo=nixos&logoColor=white)](https://nixos.org)
-[![Last commit](https://img.shields.io/github/last-commit/Daaboulex/streamcontroller-nix)](https://github.com/Daaboulex/streamcontroller-nix/commits)
-[![Stars](https://img.shields.io/github/stars/Daaboulex/streamcontroller-nix?style=flat)](https://github.com/Daaboulex/streamcontroller-nix/stargazers)
-[![Issues](https://img.shields.io/github/issues/Daaboulex/streamcontroller-nix)](https://github.com/Daaboulex/streamcontroller-nix/issues)
+<!-- BEGIN generated:badges -->
+[![NixOS unstable](https://img.shields.io/badge/NixOS-unstable-78C0E8?logo=nixos&logoColor=white)](https://nixos.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+<!-- END generated:badges -->
 
 Nix flake for [StreamController](https://github.com/StreamController/StreamController) — Elgato Stream Deck control application for Linux with plugin ecosystem.
 
+<!-- BEGIN generated:upstream -->
 ## Upstream
 
-This is a **Nix packaging wrapper** — not the original project. All credit for StreamController goes to:
-
-- **Author**: [Core447 / StreamController org](https://github.com/StreamController)
-- **Repository**: [github.com/StreamController/StreamController](https://github.com/StreamController/StreamController)
-- **License**: [GPL-3.0-only](https://github.com/StreamController/StreamController/blob/main/LICENSE)
-
-Tracks GitHub releases. Daily upstream check at 06:00 UTC.
+| | |
+|---|---|
+| **Project** | [StreamController/StreamController](https://github.com/StreamController/StreamController) |
+| **License** | GPL-3.0 |
+| **Tracked** | GitHub releases |
+<!-- END generated:upstream -->
 
 ## Components
 
@@ -60,6 +58,39 @@ Buttons are addressed as `COLxROW` (zero-indexed, top-left origin). For a 5x3 St
 0x1  1x1  2x1  3x1  4x1
 0x2  1x2  2x2  3x2  4x2
 ```
+
+<!-- BEGIN generated:installation -->
+## Installation
+
+Add as a flake input:
+
+```nix
+{
+  inputs.streamcontroller = {
+    url = "github:Daaboulex/streamcontroller-nix";
+    inputs.nixpkgs.follows = "nixpkgs";
+  };
+}
+```
+
+Then add the overlay:
+
+```nix
+nixpkgs.overlays = [ inputs.streamcontroller.overlays.default ];
+```
+
+Import the NixOS module:
+
+```nix
+imports = [ inputs.streamcontroller.nixosModules.default ];
+```
+
+Import the Home Manager module:
+
+```nix
+home-manager.sharedModules = [ inputs.streamcontroller.homeManagerModules.default ];
+```
+<!-- END generated:installation -->
 
 ## Usage
 
@@ -426,6 +457,15 @@ nix build .#streamcontroller-cli     # build the offline CLI
 
 CI runs the same chain daily via `.github/workflows/update.yml`; manual updates rarely needed.
 
+<!-- BEGIN generated:options -->
+<!-- END generated:options -->
+
 ## License
 
 This packaging flake is [GPL-3.0-only](./LICENSE) licensed (matches upstream). Upstream StreamController is [GPL-3.0-only](https://github.com/StreamController/StreamController/blob/main/LICENSE).
+
+<!-- BEGIN generated:footer -->
+---
+
+*Maintained as part of the [Daaboulex](https://github.com/Daaboulex) NixOS ecosystem.*
+<!-- END generated:footer -->
