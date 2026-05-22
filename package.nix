@@ -25,13 +25,13 @@
   kdotool,
 }:
 let
-  version = "1.5.0-beta.13";
+  version = "1.5.0-beta.14";
 
   src = fetchFromGitHub {
     owner = "StreamController";
     repo = "StreamController";
     rev = version;
-    hash = "sha256-b5tRhXEQGRhaJd1Q/hlmqUTO+0F+3+lziYSi8QpUa9c=";
+    hash = "sha256-JGJc7bj58oZwvtExSv+tv7Ug84RYdEkcMBI3ZmqpaKY=";
   };
 
   python = python3Packages.python.withPackages (
