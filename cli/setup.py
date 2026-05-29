@@ -1,10 +1,10 @@
 from setuptools import setup, find_namespace_packages
 
 setup(
-    name="cli-anything-streamcontroller",
+    name="streamcontroller-cli",
     version="0.1.0",
-    description="CLI harness for StreamController — manage Stream Deck pages, buttons, plugins, and settings",
-    author="cli-anything",
+    description="Offline CLI for StreamController — manage Stream Deck pages, buttons, plugins, and settings",
+    author="Daaboulex",
     packages=find_namespace_packages(include=["cli_anything.*"]),
     python_requires=">=3.8",
     install_requires=[
@@ -12,7 +12,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "cli-anything-streamcontroller=cli_anything.streamcontroller.streamcontroller_cli:main",
+            "streamcontroller-cli=cli_anything.streamcontroller.streamcontroller_cli:main",
         ],
     },
 )

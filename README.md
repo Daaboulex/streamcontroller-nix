@@ -16,6 +16,7 @@ Nix flake for [StreamController](https://github.com/StreamController/StreamContr
 | **Project** | [StreamController/StreamController](https://github.com/StreamController/StreamController) |
 | **License** | GPL-3.0 |
 | **Tracked** | GitHub releases |
+
 <!-- END generated:upstream -->
 
 ## Components
@@ -54,7 +55,7 @@ All Elgato Stream Deck models are supported:
 
 Buttons are addressed as `COLxROW` (zero-indexed, top-left origin). For a 5x3 Stream Deck:
 
-```
+```text
 0x0  1x0  2x0  3x0  4x0
 0x1  1x1  2x1  3x1  4x1
 0x2  1x2  2x2  3x2  4x2
@@ -91,6 +92,7 @@ Import the Home Manager module:
 ```nix
 home-manager.sharedModules = [ inputs.streamcontroller.homeManagerModules.default ];
 ```
+
 <!-- END generated:installation -->
 
 ## Usage
@@ -414,7 +416,7 @@ This reads all page JSONs and default page settings, then outputs valid Nix read
 
 ## Repository structure
 
-```
+```text
 streamcontroller-nix/
 ├── flake.nix                  # Flake definition (packages, overlay, modules)
 ├── package.nix                # StreamController application package
@@ -463,7 +465,7 @@ CI runs the same chain daily via `.github/workflows/update.yml`; manual updates 
 
 ## License
 
-This packaging flake is [GPL-3.0-only](./LICENSE) licensed (matches upstream). Upstream StreamController is [GPL-3.0-only](https://github.com/StreamController/StreamController/blob/main/LICENSE).
+This packaging flake is [MIT](./LICENSE) licensed. Upstream StreamController is [GPL-3.0-only](https://github.com/StreamController/StreamController/blob/main/LICENSE) (the packaged derivations carry `meta.license = gpl3Only` accordingly).
 
 <!-- BEGIN generated:footer -->
 ---

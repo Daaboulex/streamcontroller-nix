@@ -10,6 +10,11 @@ let
   pkg = cfg.package;
 in
 {
+  # nixpkgs now ships its own programs/streamcontroller.nix — disable it so this
+  # module (de-Flatpaked package + udev + optional autostart) owns the
+  # programs.streamcontroller namespace without a duplicate-declaration conflict.
+  disabledModules = [ "programs/streamcontroller.nix" ];
+
   options.programs.streamcontroller = {
     enable = lib.mkEnableOption "StreamController — Elgato Stream Deck control application";
 

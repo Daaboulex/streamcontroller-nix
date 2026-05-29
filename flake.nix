@@ -3,72 +3,66 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-parts.url = "github:hercules-ci/flake-parts";
     git-hooks = {
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    home-manager = {
+      url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    std = {
+      url = "github:Daaboulex/nix-packaging-standard?ref=v2.2.2";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.git-hooks.follows = "git-hooks";
+    };
   };
 
   outputs =
-    {
+    inputs@{
+      flake-parts,
       self,
-      nixpkgs,
-      git-hooks,
+      ...
     }:
-    let
+    flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ "x86_64-linux" ];
-      forAllSystems = nixpkgs.lib.genAttrs systems;
-    in
-    {
-      packages = forAllSystems (
-        system:
-        let
-          pkgs = import nixpkgs { localSystem.system = system; };
-        in
-        {
-          streamcontroller = pkgs.callPackage ./package.nix { };
-          streamcontroller-cli = pkgs.callPackage ./cli/package.nix { };
-          default = self.packages.${system}.streamcontroller;
-        }
-      );
 
-      overlays.default = final: _prev: {
-        inherit (self.packages.${final.system}) streamcontroller;
+      imports = [ inputs.std.flakeModules.base ];
+
+      flake.overlays.default = final: _prev: {
+        streamcontroller = final.callPackage ./package.nix { };
       };
+      flake.nixosModules.default = import ./module.nix;
+      flake.homeManagerModules.default = import ./hm-module.nix;
 
-      nixosModules.default = import ./module.nix;
-      homeManagerModules.default = import ./hm-module.nix;
+      perSystem =
+        {
+          system,
+          pkgs,
+          self',
+          ...
+        }:
+        {
+          packages.streamcontroller = pkgs.callPackage ./package.nix { };
+          packages.streamcontroller-cli = pkgs.callPackage ./cli/package.nix { };
+          packages.default = self'.packages.streamcontroller;
 
-      formatter = forAllSystems (system: nixpkgs.legacyPackages.${system}.nixfmt-rfc-style);
+          checks.module-eval-nixos = inputs.std.lib.nixosModuleCheck {
+            inherit (inputs) nixpkgs;
+            inherit system;
+            overlays = [ self.overlays.default ];
+            module = ./module.nix;
+            config.programs.streamcontroller.enable = true;
+          };
 
-      checks = forAllSystems (system: {
-        pre-commit-check = git-hooks.lib.${system}.run {
-          src = self;
-          hooks.nixfmt-rfc-style.enable = true;
-          hooks.typos.enable = true;
-          hooks.rumdl.enable = true;
-          hooks.check-readme-sections = {
-            enable = true;
-            name = "check-readme-sections";
-            entry = "bash scripts/check-readme-sections.sh";
-            files = "README\.md$";
-            language = "system";
+          checks.module-eval-hm = inputs.std.lib.homeModuleCheck {
+            inherit (inputs) nixpkgs home-manager;
+            inherit system;
+            overlays = [ self.overlays.default ];
+            module = ./hm-module.nix;
+            config.programs.streamcontroller.enable = true;
           };
         };
-      });
-
-      devShells = forAllSystems (
-        system:
-        let
-          pkgs = nixpkgs.legacyPackages.${system};
-        in
-        {
-          default = pkgs.mkShell {
-            inherit (self.checks.${system}.pre-commit-check) shellHook;
-            buildInputs = self.checks.${system}.pre-commit-check.enabledPackages;
-            packages = with pkgs; [ nil ];
-          };
-        }
-      );
     };
 }
