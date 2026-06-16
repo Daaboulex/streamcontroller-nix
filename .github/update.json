@@ -13,5 +13,17 @@
     "binary": null,
     "args": null,
     "check": "desktop"
-  }
+  },
+  "description": "StreamController packaged for NixOS - de-Flatpaked native Stream Deck app with NixOS + Home Manager page-config modules",
+  "topics": [
+    "nix",
+    "nixos",
+    "flake",
+    "nixos-module",
+    "home-manager",
+    "streamcontroller",
+    "stream-deck",
+    "elgato",
+    "gtk4"
+  ]
 }
