@@ -263,7 +263,7 @@ python3Packages.stdenv.mkDerivation {
     homepage = "https://github.com/StreamController/StreamController";
     description = "Elgato Stream Deck control application for Linux with plugin ecosystem";
     license = lib.licenses.gpl3Only;
-    platforms = [ "x86_64-linux" ];
+    platforms = lib.platforms.linux;
     mainProgram = "streamcontroller";
   };
 }
