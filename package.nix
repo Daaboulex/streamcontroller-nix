@@ -66,7 +66,20 @@ let
       imageio
       pyperclip
       rapidfuzz
-      streamcontroller-streamdeck
+      # Open the deck through hidapi's hidraw backend, not libusb. The bundled
+      # python-elgato-streamdeck fork (nixpkgs hardcodes libhidapi-libusb.so)
+      # detaches usbhid and drives the deck over libusb -- on hidapi 0.15.0 that
+      # backend cannot reopen the path hid_enumerate returns and wedges the
+      # device when the enumeration is freed, and it bypasses the kernel
+      # usbhid.quirks a host may need for the deck's HID probe. hidraw opens
+      # /dev/hidrawN via the kernel HID stack (uaccess granted by systemd's
+      # AV-production-controller hwdb), never detaching the driver.
+      (streamcontroller-streamdeck.overridePythonAttrs (old: {
+        postPatch = (old.postPatch or "") + ''
+          substituteInPlace src/StreamDeck/Transport/LibUSBHIDAPI.py \
+            --replace-fail libhidapi-libusb.so libhidapi-hidraw.so
+        '';
+      }))
       usb-monitor
       python-wayland-extra
       indexed-bzip2
