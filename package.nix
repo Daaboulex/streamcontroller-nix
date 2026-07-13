@@ -111,6 +111,10 @@ let
       python-osc
       aiofiles
       spotipy
+      dasbus
+      # std:requirements-auto-add -- update.sh inserts nixpkgs-resolvable NEW
+      # upstream requirements above this marker; the requirements-covered
+      # check gates real coverage (see the standard's README).
       (streamcontroller-plugin-tools.overridePythonAttrs (old: {
         postPatch = (old.postPatch or "") + ''
                     cat > streamcontroller_plugin_tools/installation_helpers.py <<'EOF'
@@ -142,6 +146,9 @@ in
 python3Packages.stdenv.mkDerivation {
   pname = "streamcontroller";
   inherit version src;
+
+  # The env and source feed the requirements-covered flake check.
+  passthru = { inherit python src; };
 
   nativeBuildInputs = [
     wrapGAppsHook4

@@ -13,7 +13,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     std = {
-      url = "github:Daaboulex/nix-packaging-standard?ref=v2.9.1";
+      url = "github:Daaboulex/nix-packaging-standard?ref=v2.10.0";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.git-hooks.follows = "git-hooks";
     };
@@ -50,6 +50,17 @@
           packages.streamcontroller = pkgs.callPackage ./package.nix { };
           packages.streamcontroller-cli = pkgs.callPackage ./cli/package.nix { };
           packages.default = self'.packages.streamcontroller;
+
+          # An env+source python app has no wheel metadata, so a new upstream
+          # requirement ships silently (dasbus, 1.5.0-beta.15) -- this gate
+          # reads the source's requirements.txt against the built env.
+          checks.requirements-covered = inputs.std.lib.requirementsCoveredCheck {
+            inherit pkgs;
+            env = self'.packages.streamcontroller.passthru.python;
+            src = self'.packages.streamcontroller.passthru.src;
+            # One source of truth with update.sh's auto-add skip list.
+            ignore = (builtins.fromJSON (builtins.readFile ./.github/update.json)).pythonRequirements.ignore;
+          };
 
           checks.module-eval-nixos = inputs.std.lib.nixosModuleCheck {
             inherit (inputs) nixpkgs;

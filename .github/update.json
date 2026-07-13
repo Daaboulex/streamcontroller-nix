@@ -25,5 +25,37 @@
     "stream-deck",
     "elgato",
     "gtk4"
-  ]
+  ],
+  "pythonRequirements": {
+    "file": "requirements.txt",
+    "envFile": "package.nix",
+    "ignore": [
+      "cloudpickle",
+      "colorama",
+      "decorator",
+      "dnspython",
+      "gitdb",
+      "h2",
+      "hpack",
+      "hyperframe",
+      "memray",
+      "meson",
+      "meson-python",
+      "opencv-python",
+      "patchelf",
+      "pip-review",
+      "pipenv",
+      "proglog",
+      "py-gcode-metadata",
+      "pyenchant",
+      "pygobject-stubs",
+      "pymongo",
+      "pyproject-metadata",
+      "req2flatpak",
+      "requirements-parser",
+      "setuptools",
+      "smmap",
+      "types-setuptools"
+    ]
+  }
 }
