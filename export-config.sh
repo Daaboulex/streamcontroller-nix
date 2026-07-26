@@ -1,19 +1,24 @@
 #!/usr/bin/env bash
-# Usage: bash export-config.sh [--data-dir PATH] > streamcontroller-config.nix
+# Usage: bash export-config.sh [--data-dir PATH] [--module] > streamcontroller-config.nix
 # Reads current StreamController pages and generates Nix Home Manager config.
 # Requires: jq
 set -euo pipefail
 
 # --- Argument parsing ---
 DATA_DIR=""
+MODULE=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
   --data-dir)
     DATA_DIR="$2"
     shift 2
     ;;
+  --module)
+    MODULE=true
+    shift
+    ;;
   -h | --help)
-    echo "Usage: bash export-config.sh [--data-dir PATH] > streamcontroller-config.nix"
+    echo "Usage: bash export-config.sh [--data-dir PATH] [--module] > streamcontroller-config.nix"
     echo ""
     echo "Reads current StreamController page JSON files and generates Nix"
     echo "Home Manager config for programs.streamcontroller."
@@ -22,6 +27,7 @@ while [[ $# -gt 0 ]]; do
     echo "  --data-dir PATH  StreamController data directory"
     echo "                   Default: ~/.var/app/com.core447.StreamController/data (Flatpak)"
     echo "                   Fallback: ~/.local/share/StreamController (native)"
+    echo "  --module         Wrap as importable Nix module (adds { ... }: and { } braces)"
     exit 0
     ;;
   *)
@@ -340,92 +346,104 @@ emit_key() {
 }
 
 # --- Main output ---
-echo "# Auto-generated StreamController config"
-echo "# Source: $DATA_DIR"
-echo "# Generated: $(date -Iseconds)"
-echo ""
-echo "programs.streamcontroller = {"
-echo "  enable = true;"
-echo ""
+output_body() {
+  echo "# Auto-generated StreamController config"
+  echo "# Source: $DATA_DIR"
+  echo "# Generated: $(date -Iseconds)"
+  echo ""
+  echo "programs.streamcontroller = {"
+  echo "  enable = true;"
+  echo ""
 
-# --- Default pages ---
-pages_settings="$SETTINGS_DIR/pages.json"
-if [[ -f $pages_settings ]]; then
-  default_pages=$(jq -r '.["default-pages"] // empty' "$pages_settings" 2>/dev/null)
-  if [[ -n $default_pages && $default_pages != "null" ]]; then
-    num_defaults=$(echo "$default_pages" | jq 'length')
-    if [[ $num_defaults -gt 0 ]]; then
-      echo "  defaultPages = {"
-      echo "$default_pages" | jq -r 'to_entries[] | "    \"\(.key)\" = \"\(.value)\";"'
-      echo "  };"
-      echo ""
+  # --- Default pages ---
+  pages_settings="$SETTINGS_DIR/pages.json"
+  if [[ -f $pages_settings ]]; then
+    default_pages=$(jq -r '.["default-pages"] // empty' "$pages_settings" 2>/dev/null)
+    if [[ -n $default_pages && $default_pages != "null" ]]; then
+      num_defaults=$(echo "$default_pages" | jq 'length')
+      if [[ $num_defaults -gt 0 ]]; then
+        echo "  defaultPages = {"
+        echo "$default_pages" | jq -r 'to_entries[] | "    \"\(.key)\" = \"\(.value)\";"'
+        echo "  };"
+        echo ""
+      fi
     fi
   fi
-fi
 
-# --- Pages ---
-page_files=()
-for f in "$PAGES_DIR"/*.json; do
-  [[ -f $f ]] && page_files+=("$f")
-done
-
-if [[ ${#page_files[@]} -gt 0 ]]; then
-  echo "  pages = {"
-  for page_file in "${page_files[@]}"; do
-    page_name=$(basename "$page_file" .json)
-    page_json=$(jq '.' "$page_file")
-
-    echo ""
-    echo "    \"${page_name}\" = {"
-
-    # Brightness
-    brightness_json=$(echo "$page_json" | jq '.brightness // empty' 2>/dev/null)
-    if [[ -n $brightness_json && $brightness_json != "null" ]]; then
-      brightness_val=$(echo "$brightness_json" | jq -r '.value // empty')
-      brightness_ow=$(echo "$brightness_json" | jq -r '.overwrite // empty')
-      if [[ -n $brightness_val || -n $brightness_ow ]]; then
-        echo "      brightness = {"
-        [[ -n $brightness_val ]] && echo "        value = ${brightness_val};"
-        [[ -n $brightness_ow && $brightness_ow != "false" ]] && echo "        overwrite = ${brightness_ow};"
-        echo "      };"
-      fi
-    fi
-
-    # Screensaver
-    screensaver_json=$(echo "$page_json" | jq '.screensaver // empty' 2>/dev/null)
-    if [[ -n $screensaver_json && $screensaver_json != "null" ]]; then
-      printf '      screensaver = '
-      json_to_nix "$screensaver_json" 6
-      printf ';\n'
-    fi
-
-    # Extra config — everything that's not keys, brightness, screensaver
-    extra_json=$(echo "$page_json" | jq 'del(.keys, .brightness, .screensaver) | if . == {} then empty else . end' 2>/dev/null)
-    if [[ -n $extra_json && $extra_json != "null" ]]; then
-      printf '      extraConfig = '
-      json_to_nix "$extra_json" 6
-      printf ';\n'
-    fi
-
-    # Keys
-    keys_json=$(echo "$page_json" | jq '.keys // empty' 2>/dev/null)
-    if [[ -n $keys_json && $keys_json != "null" ]]; then
-      key_count=$(echo "$keys_json" | jq 'length')
-      if [[ $key_count -gt 0 ]]; then
-        echo "      keys = {"
-        key_coords=$(echo "$keys_json" | jq -r 'keys[]')
-        while IFS= read -r coord; do
-          key_json=$(echo "$keys_json" | jq ".[$(echo "$coord" | jq -R .)]")
-          emit_key "$key_json" "$coord" 8
-        done <<<"$key_coords"
-        echo "      };"
-      fi
-    fi
-
-    echo "    };"
+  # --- Pages ---
+  page_files=()
+  for f in "$PAGES_DIR"/*.json; do
+    [[ -f $f ]] && page_files+=("$f")
   done
-  echo ""
-  echo "  };"
-fi
 
-echo "};"
+  if [[ ${#page_files[@]} -gt 0 ]]; then
+    echo "  pages = {"
+    for page_file in "${page_files[@]}"; do
+      page_name=$(basename "$page_file" .json)
+      page_json=$(jq '.' "$page_file")
+
+      echo ""
+      echo "    \"${page_name}\" = {"
+
+      # Brightness
+      brightness_json=$(echo "$page_json" | jq '.brightness // empty' 2>/dev/null)
+      if [[ -n $brightness_json && $brightness_json != "null" ]]; then
+        brightness_val=$(echo "$brightness_json" | jq -r '.value // empty')
+        brightness_ow=$(echo "$brightness_json" | jq -r '.overwrite // empty')
+        if [[ -n $brightness_val || -n $brightness_ow ]]; then
+          echo "      brightness = {"
+          [[ -n $brightness_val ]] && echo "        value = ${brightness_val};"
+          [[ -n $brightness_ow && $brightness_ow != "false" ]] && echo "        overwrite = ${brightness_ow};"
+          echo "      };"
+        fi
+      fi
+
+      # Screensaver
+      screensaver_json=$(echo "$page_json" | jq '.screensaver // empty' 2>/dev/null)
+      if [[ -n $screensaver_json && $screensaver_json != "null" ]]; then
+        printf '      screensaver = '
+        json_to_nix "$screensaver_json" 6
+        printf ';\n'
+      fi
+
+      # Extra config — everything that's not keys, brightness, screensaver
+      extra_json=$(echo "$page_json" | jq 'del(.keys, .brightness, .screensaver) | if . == {} then empty else . end' 2>/dev/null)
+      if [[ -n $extra_json && $extra_json != "null" ]]; then
+        printf '      extraConfig = '
+        json_to_nix "$extra_json" 6
+        printf ';\n'
+      fi
+
+      # Keys
+      keys_json=$(echo "$page_json" | jq '.keys // empty' 2>/dev/null)
+      if [[ -n $keys_json && $keys_json != "null" ]]; then
+        key_count=$(echo "$keys_json" | jq 'length')
+        if [[ $key_count -gt 0 ]]; then
+          echo "      keys = {"
+          key_coords=$(echo "$keys_json" | jq -r 'keys[]')
+          while IFS= read -r coord; do
+            key_json=$(echo "$keys_json" | jq ".[$(echo "$coord" | jq -R .)]")
+            emit_key "$key_json" "$coord" 8
+          done <<<"$key_coords"
+          echo "      };"
+        fi
+      fi
+
+      echo "    };"
+    done
+    echo ""
+    echo "  };"
+  fi
+
+  echo "};"
+}
+
+if [[ $MODULE == true ]]; then
+  echo "{ ... }:"
+  echo ""
+  echo "{"
+  output_body | sed '/./s/^/  /'
+  echo "}"
+else
+  output_body
+fi
