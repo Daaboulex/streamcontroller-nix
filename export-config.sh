@@ -94,13 +94,8 @@ json_to_nix() {
     ;;
   number)
     local val
-    val=$(echo "$json" | jq -r '.')
-    # Check if it's a float (has decimal point)
-    if [[ $val == *.* ]]; then
-      printf '%s' "$val"
-    else
-      printf '%s' "$val"
-    fi
+    val=$(echo "$json" | jq -r 'if type == "number" and . == floor then (floor | tostring) else . end')
+    printf '%s' "$val"
     ;;
   boolean)
     local val
@@ -178,10 +173,14 @@ emit_label_pos() {
   local text font_size color font_family font_weight outline_width
   text=$(echo "$pos_json" | jq -r '.text // empty')
   font_size=$(echo "$pos_json" | jq -r '."font-size" // empty')
+  # Convert whole-number floats to integers (HM module expects nullOr int)
+  [[ -n $font_size ]] && font_size=$(echo "$font_size" | jq -r 'if . == floor then (floor | tostring) else . end')
   color=$(echo "$pos_json" | jq -r '.color // empty')
   font_family=$(echo "$pos_json" | jq -r '."font-family" // empty')
   font_weight=$(echo "$pos_json" | jq -r '."font-weight" // empty')
+  [[ -n $font_weight ]] && font_weight=$(echo "$font_weight" | jq -r 'if . == floor then (floor | tostring) else . end')
   outline_width=$(echo "$pos_json" | jq -r '.outline_width // empty')
+  [[ -n $outline_width ]] && outline_width=$(echo "$outline_width" | jq -r 'if . == floor then (floor | tostring) else . end')
 
   if [[ -n $text || -n $font_size || -n $color || -n $font_family || -n $font_weight || -n $outline_width ]]; then
     has_content=true
@@ -287,12 +286,15 @@ emit_state() {
   local lca
   lca=$(echo "$state_json" | jq '.["label-control-actions"] // empty' 2>/dev/null)
   if [[ -n $lca && $lca != "null" ]]; then
+    # Convert null elements to 0 (HM module expects listOf int, no nulls)
+    local lca_fixed
+    lca_fixed=$(echo "$lca" | jq 'map(. // 0)')
     local lca_str
-    lca_str=$(echo "$lca" | jq -c '.')
+    lca_str=$(echo "$lca_fixed" | jq -c '.')
     # Only emit if not default [0,0,0]
     if [[ $lca_str != "[0,0,0]" ]]; then
       printf '%s' "${inner_pad}label-control-actions = "
-      json_to_nix "$lca" "$((indent_n + 2))"
+      json_to_nix "$lca_fixed" "$((indent_n + 2))"
       printf ';\n'
     fi
   fi
