@@ -468,7 +468,4 @@ CI runs the same chain daily via `.github/workflows/update.yml`; manual updates 
 This packaging flake is [MIT](./LICENSE) licensed. Upstream StreamController is [GPL-3.0-only](https://github.com/StreamController/StreamController/blob/main/LICENSE) (the packaged derivations carry `meta.license = gpl3Only` accordingly).
 
 <!-- BEGIN generated:footer -->
----
-
-*Maintained as part of the [Daaboulex](https://github.com/Daaboulex) NixOS ecosystem.*
 <!-- END generated:footer -->
