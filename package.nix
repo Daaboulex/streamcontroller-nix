@@ -127,10 +127,10 @@ let
               res = run([sys.executable, "-m", "virtualenv", "--system-site-packages", str(path)])
               if res.returncode != 0:
                   print(f"Virtualenv creation failed for {path}")
-              
+
               if path_to_requirements_txt is None:
                   return
-              
+
               # Use full path to pip inside venv and avoid 'source'
               pip_path = os.path.join(path, "bin", "pip")
               cmd = f"{pip_path} install -r {path_to_requirements_txt}"
