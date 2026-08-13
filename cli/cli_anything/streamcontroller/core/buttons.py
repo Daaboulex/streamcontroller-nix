@@ -1,7 +1,6 @@
 """Button/key management — set images, labels, actions on page keys."""
 
 import os
-from typing import Optional
 
 from cli_anything.streamcontroller.core.settings import load_json, save_json
 
@@ -47,17 +46,28 @@ class ButtonManager:
         coord = self._parse_coord(coord)
         return data.get(input_type, {}).get(coord, {})
 
-    def get_key_state(self, page_name: str, coord: str, state: int = 0, input_type: str = "keys") -> dict:
+    def get_key_state(
+        self, page_name: str, coord: str, state: int = 0, input_type: str = "keys"
+    ) -> dict:
         """Get state data for a key."""
         key = self.get_key(page_name, coord, input_type)
         return key.get("states", {}).get(str(state), {})
 
-    def set_key_state(self, page_name: str, coord: str, state: int, state_data: dict, input_type: str = "keys"):
+    def set_key_state(
+        self,
+        page_name: str,
+        coord: str,
+        state: int,
+        state_data: dict,
+        input_type: str = "keys",
+    ):
         """Set state data for a key."""
         path = self._resolve_page_path(page_name)
         data = load_json(path)
         coord = self._parse_coord(coord)
-        data.setdefault(input_type, {}).setdefault(coord, {}).setdefault("states", {})[str(state)] = state_data
+        data.setdefault(input_type, {}).setdefault(coord, {}).setdefault("states", {})[
+            str(state)
+        ] = state_data
         save_json(path, data)
 
     # --- Labels ---
@@ -67,9 +77,17 @@ class ButtonManager:
         state_data = self.get_key_state(page_name, coord, state)
         return state_data.get("labels", {})
 
-    def set_label(self, page_name: str, coord: str, position: str, text: str,
-                  state: int = 0, font_family: str = None, font_size: int = None,
-                  color: list = None):
+    def set_label(
+        self,
+        page_name: str,
+        coord: str,
+        position: str,
+        text: str,
+        state: int = 0,
+        font_family: str | None = None,
+        font_size: int | None = None,
+        color: list | None = None,
+    ):
         """Set a label on a key.
 
         Args:
@@ -79,7 +97,11 @@ class ButtonManager:
         data = load_json(path)
         coord_key = self._parse_coord(coord)
 
-        states = data.setdefault("keys", {}).setdefault(coord_key, {}).setdefault("states", {})
+        states = (
+            data.setdefault("keys", {})
+            .setdefault(coord_key, {})
+            .setdefault("states", {})
+        )
         state_data = states.setdefault(str(state), {})
         labels = state_data.setdefault("labels", {})
         label = labels.setdefault(position, {})
@@ -100,16 +122,20 @@ class ButtonManager:
         data = load_json(path)
         coord_key = self._parse_coord(coord)
 
-        labels = (data.get("keys", {}).get(coord_key, {})
-                  .get("states", {}).get(str(state), {})
-                  .get("labels", {}))
+        labels = (
+            data.get("keys", {})
+            .get(coord_key, {})
+            .get("states", {})
+            .get(str(state), {})
+            .get("labels", {})
+        )
         if position in labels:
             del labels[position]
             save_json(path, data)
 
     # --- Media / Images ---
 
-    def get_image(self, page_name: str, coord: str, state: int = 0) -> Optional[str]:
+    def get_image(self, page_name: str, coord: str, state: int = 0) -> str | None:
         """Get the image path for a key state."""
         state_data = self.get_key_state(page_name, coord, state)
         return state_data.get("media", {}).get("path")
@@ -124,7 +150,11 @@ class ButtonManager:
 
         data = load_json(path)
         coord_key = self._parse_coord(coord)
-        states = data.setdefault("keys", {}).setdefault(coord_key, {}).setdefault("states", {})
+        states = (
+            data.setdefault("keys", {})
+            .setdefault(coord_key, {})
+            .setdefault("states", {})
+        )
         state_data = states.setdefault(str(state), {})
         media = state_data.setdefault("media", {})
         media["path"] = image_path
@@ -136,9 +166,13 @@ class ButtonManager:
         data = load_json(path)
         coord_key = self._parse_coord(coord)
 
-        media = (data.get("keys", {}).get(coord_key, {})
-                 .get("states", {}).get(str(state), {})
-                 .get("media", {}))
+        media = (
+            data.get("keys", {})
+            .get(coord_key, {})
+            .get("states", {})
+            .get(str(state), {})
+            .get("media", {})
+        )
         if "path" in media:
             media["path"] = None
             save_json(path, data)
@@ -150,14 +184,24 @@ class ButtonManager:
         state_data = self.get_key_state(page_name, coord, state)
         return state_data.get("actions", [])
 
-    def set_action(self, page_name: str, coord: str, action_id: str,
-                   state: int = 0, settings: dict = None):
+    def set_action(
+        self,
+        page_name: str,
+        coord: str,
+        action_id: str,
+        state: int = 0,
+        settings: dict | None = None,
+    ):
         """Set (replace) the action on a key state."""
         path = self._resolve_page_path(page_name)
         data = load_json(path)
         coord_key = self._parse_coord(coord)
 
-        states = data.setdefault("keys", {}).setdefault(coord_key, {}).setdefault("states", {})
+        states = (
+            data.setdefault("keys", {})
+            .setdefault(coord_key, {})
+            .setdefault("states", {})
+        )
         state_data = states.setdefault(str(state), {})
         action = {"id": action_id}
         if settings:
@@ -165,14 +209,24 @@ class ButtonManager:
         state_data["actions"] = [action]
         save_json(path, data)
 
-    def add_action(self, page_name: str, coord: str, action_id: str,
-                   state: int = 0, settings: dict = None):
+    def add_action(
+        self,
+        page_name: str,
+        coord: str,
+        action_id: str,
+        state: int = 0,
+        settings: dict | None = None,
+    ):
         """Add an action to a key state (appends to existing actions)."""
         path = self._resolve_page_path(page_name)
         data = load_json(path)
         coord_key = self._parse_coord(coord)
 
-        states = data.setdefault("keys", {}).setdefault(coord_key, {}).setdefault("states", {})
+        states = (
+            data.setdefault("keys", {})
+            .setdefault(coord_key, {})
+            .setdefault("states", {})
+        )
         state_data = states.setdefault(str(state), {})
         actions = state_data.setdefault("actions", [])
         action = {"id": action_id}
@@ -187,8 +241,12 @@ class ButtonManager:
         data = load_json(path)
         coord_key = self._parse_coord(coord)
 
-        state_data = (data.get("keys", {}).get(coord_key, {})
-                      .get("states", {}).get(str(state), {}))
+        state_data = (
+            data.get("keys", {})
+            .get(coord_key, {})
+            .get("states", {})
+            .get(str(state), {})
+        )
         if "actions" in state_data:
             state_data["actions"] = []
             save_json(path, data)
@@ -215,12 +273,16 @@ class ButtonManager:
                     if t:
                         label_text = t
                         break
-                keys.append({
-                    "type": input_type,
-                    "coordinate": coord,
-                    "states": n_states,
-                    "label": label_text,
-                    "image": media.get("path"),
-                    "actions": [a.get("id", "") for a in actions] if isinstance(actions, list) else [],
-                })
+                keys.append(
+                    {
+                        "type": input_type,
+                        "coordinate": coord,
+                        "states": n_states,
+                        "label": label_text,
+                        "image": media.get("path"),
+                        "actions": [a.get("id", "") for a in actions]
+                        if isinstance(actions, list)
+                        else [],
+                    }
+                )
         return keys

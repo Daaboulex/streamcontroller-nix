@@ -36,7 +36,7 @@ class OutputFormatter:
                     else:
                         print(f"  {item}")
 
-    def print_error(self, message: str, details: dict = None):
+    def print_error(self, message: str, details: dict | None = None):
         """Print an error message."""
         if self.json_mode:
             err = {"error": message}
@@ -50,7 +50,7 @@ class OutputFormatter:
                 for k, v in details.items():
                     print(f"  {k}: {v}", file=sys.stderr)
 
-    def print_success(self, message: str, data: dict = None):
+    def print_success(self, message: str, data: dict | None = None):
         """Print a success message."""
         if self.json_mode:
             result = {"status": "ok", "message": message}
@@ -66,7 +66,7 @@ class OutputFormatter:
         if self.json_mode:
             result = []
             for row in rows:
-                result.append(dict(zip(headers, row)))
+                result.append(dict(zip(headers, row, strict=False)))
             json.dump(result, sys.stdout, indent=2, default=str)
             sys.stdout.write("\n")
             return
@@ -84,5 +84,7 @@ class OutputFormatter:
         print(header_line)
         print("  ".join("-" * w for w in col_widths))
         for row in rows:
-            line = "  ".join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row))
+            line = "  ".join(
+                str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)
+            )
             print(line)

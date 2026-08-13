@@ -1,10 +1,7 @@
 """Device management — list known devices and their configurations."""
 
-import os
-from typing import Optional
-
-from cli_anything.streamcontroller.core.settings import SettingsManager, load_json
 from cli_anything.streamcontroller.core.config import DECK_MODELS
+from cli_anything.streamcontroller.core.settings import SettingsManager
 
 
 class DeviceManager:
@@ -26,28 +23,32 @@ class DeviceManager:
             screensaver = deck_settings.get("screensaver", {})
             default_page = defaults.get(serial)
 
-            devices.append({
-                "serial": serial,
-                "brightness": brightness,
-                "default_page": default_page,
-                "screensaver_enabled": screensaver.get("enable", False),
-                "screensaver_delay": screensaver.get("time-delay", 5),
-            })
+            devices.append(
+                {
+                    "serial": serial,
+                    "brightness": brightness,
+                    "default_page": default_page,
+                    "screensaver_enabled": screensaver.get("enable", False),
+                    "screensaver_delay": screensaver.get("time-delay", 5),
+                }
+            )
 
         # Also include serials that have default pages but no settings file
         for serial in defaults:
             if serial not in serials:
-                devices.append({
-                    "serial": serial,
-                    "brightness": 75,
-                    "default_page": defaults[serial],
-                    "screensaver_enabled": False,
-                    "screensaver_delay": 5,
-                })
+                devices.append(
+                    {
+                        "serial": serial,
+                        "brightness": 75,
+                        "default_page": defaults[serial],
+                        "screensaver_enabled": False,
+                        "screensaver_delay": 5,
+                    }
+                )
 
         return devices
 
-    def get_device_info(self, serial: str) -> Optional[dict]:
+    def get_device_info(self, serial: str) -> dict | None:
         """Get detailed information about a known device."""
         deck_settings = self.settings.get_deck_settings(serial)
         if not deck_settings and serial not in self.settings.list_known_serials():
@@ -67,7 +68,4 @@ class DeviceManager:
     @staticmethod
     def list_supported_models() -> list:
         """List all supported Stream Deck models."""
-        return [
-            {"model": name, **info}
-            for name, info in DECK_MODELS.items()
-        ]
+        return [{"model": name, **info} for name, info in DECK_MODELS.items()]

@@ -3,15 +3,24 @@
 import json
 import os
 import shutil
+import sys
 import tempfile
 import unittest
 
-from cli_anything.streamcontroller.core.config import resolve_data_path, ensure_data_dirs, DECK_MODELS
-from cli_anything.streamcontroller.core.settings import SettingsManager, load_json, save_json
-from cli_anything.streamcontroller.core.pages import PageManager
 from cli_anything.streamcontroller.core.buttons import ButtonManager
-from cli_anything.streamcontroller.core.plugins import PluginManager
+from cli_anything.streamcontroller.core.config import (
+    DECK_MODELS,
+    ensure_data_dirs,
+    resolve_data_path,
+)
 from cli_anything.streamcontroller.core.devices import DeviceManager
+from cli_anything.streamcontroller.core.pages import PageManager
+from cli_anything.streamcontroller.core.plugins import PluginManager
+from cli_anything.streamcontroller.core.settings import (
+    SettingsManager,
+    load_json,
+    save_json,
+)
 from cli_anything.streamcontroller.utils.output import OutputFormatter
 
 
@@ -177,7 +186,7 @@ class TestPageManager(unittest.TestCase):
             self.assertTrue(os.path.isfile(export_path))
 
             self.pm.delete_page("ForExport")
-            import_path = self.pm.import_page(export_path, "Imported")
+            self.pm.import_page(export_path, "Imported")
             pages = self.pm.list_pages()
             self.assertEqual(len(pages), 1)
             self.assertEqual(pages[0]["name"], "Imported")
@@ -247,8 +256,15 @@ class TestButtonManager(unittest.TestCase):
         self.assertEqual(labels["bottom"]["text"], "Hello")
 
     def test_set_label_with_font(self):
-        self.bm.set_label("TestPage", "1x0", "center", "World",
-                          font_family="Arial", font_size=16, color=[255, 0, 0, 255])
+        self.bm.set_label(
+            "TestPage",
+            "1x0",
+            "center",
+            "World",
+            font_family="Arial",
+            font_size=16,
+            color=[255, 0, 0, 255],
+        )
         labels = self.bm.get_labels("TestPage", "1x0")
         self.assertEqual(labels["center"]["text"], "World")
         self.assertEqual(labels["center"]["font-family"], "Arial")
@@ -428,6 +444,7 @@ class TestOutputFormatter(unittest.TestCase):
 
     def test_json_mode(self):
         import io
+
         out = OutputFormatter(json_mode=True)
         # Capture stdout
         old_stdout = sys.stdout
@@ -440,8 +457,6 @@ class TestOutputFormatter(unittest.TestCase):
         finally:
             sys.stdout = old_stdout
 
-
-import sys
 
 if __name__ == "__main__":
     unittest.main()

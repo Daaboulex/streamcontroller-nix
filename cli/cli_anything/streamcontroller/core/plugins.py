@@ -1,8 +1,6 @@
 """Plugin management — list, inspect, and manage installed plugins."""
 
-import json
 import os
-from typing import Optional
 
 from cli_anything.streamcontroller.core.settings import load_json
 
@@ -13,8 +11,7 @@ class PluginManager:
     def __init__(self, data_path: str):
         self.data_path = data_path
         self.plugin_dir = os.environ.get(
-            "PLUGIN_DIR",
-            os.path.join(data_path, "plugins")
+            "PLUGIN_DIR", os.path.join(data_path, "plugins")
         )
 
     def list_plugins(self) -> list:
@@ -29,18 +26,20 @@ class PluginManager:
                 continue
 
             manifest = self._load_manifest(folder_path)
-            plugins.append({
-                "id": manifest.get("id", folder),
-                "name": manifest.get("name", folder),
-                "version": manifest.get("version", "unknown"),
-                "author": manifest.get("author", "unknown"),
-                "folder": folder,
-                "path": folder_path,
-            })
+            plugins.append(
+                {
+                    "id": manifest.get("id", folder),
+                    "name": manifest.get("name", folder),
+                    "version": manifest.get("version", "unknown"),
+                    "author": manifest.get("author", "unknown"),
+                    "folder": folder,
+                    "path": folder_path,
+                }
+            )
 
         return plugins
 
-    def get_plugin_info(self, plugin_id: str) -> Optional[dict]:
+    def get_plugin_info(self, plugin_id: str) -> dict | None:
         """Get detailed information about a plugin."""
         if not os.path.isdir(self.plugin_dir):
             return None
@@ -76,8 +75,10 @@ class PluginManager:
         query_lower = query.lower()
         results = []
         for plugin in self.list_plugins():
-            if (query_lower in plugin["name"].lower() or
-                    query_lower in plugin["id"].lower()):
+            if (
+                query_lower in plugin["name"].lower()
+                or query_lower in plugin["id"].lower()
+            ):
                 results.append(plugin)
         return results
 
@@ -90,9 +91,11 @@ class PluginManager:
         """Extract action information from a plugin."""
         actions = []
         for action_id, action_data in manifest.get("actions", {}).items():
-            actions.append({
-                "id": action_id,
-                "name": action_data.get("name", action_id),
-                "description": action_data.get("description", ""),
-            })
+            actions.append(
+                {
+                    "id": action_id,
+                    "name": action_data.get("name", action_id),
+                    "description": action_data.get("description", ""),
+                }
+            )
         return actions

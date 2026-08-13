@@ -1,11 +1,9 @@
 """Page management — create, list, delete, rename, import/export pages."""
 
-import json
+import datetime
 import os
 import shutil
 import zipfile
-import datetime
-from typing import Optional
 
 from cli_anything.streamcontroller.core.settings import load_json, save_json
 
@@ -34,16 +32,18 @@ class PageManager:
             n_keys = len(data.get("keys", {}))
             n_dials = len(data.get("dials", {}))
             n_touchscreens = len(data.get("touchscreens", {}))
-            pages.append({
-                "name": name,
-                "path": path,
-                "keys": n_keys,
-                "dials": n_dials,
-                "touchscreens": n_touchscreens,
-            })
+            pages.append(
+                {
+                    "name": name,
+                    "path": path,
+                    "keys": n_keys,
+                    "dials": n_dials,
+                    "touchscreens": n_touchscreens,
+                }
+            )
         return pages
 
-    def get_page_path(self, name: str) -> Optional[str]:
+    def get_page_path(self, name: str) -> str | None:
         """Resolve a page name to its file path. Returns None if not found."""
         if os.path.isfile(name):
             return name
@@ -72,7 +72,7 @@ class PageManager:
 
     # --- Create / Delete / Rename ---
 
-    def create_page(self, name: str, data: dict = None) -> str:
+    def create_page(self, name: str, data: dict | None = None) -> str:
         """Create a new page. Returns the path."""
         os.makedirs(self.pages_dir, exist_ok=True)
         path = os.path.join(self.pages_dir, f"{name}.json")
@@ -118,7 +118,7 @@ class PageManager:
         os.remove(old_path)
         return new_path
 
-    def duplicate_page(self, name: str, new_name: str = None) -> str:
+    def duplicate_page(self, name: str, new_name: str | None = None) -> str:
         """Duplicate a page. Returns the new path."""
         src_path = self.get_page_path(name)
         if not src_path:
@@ -145,7 +145,7 @@ class PageManager:
         shutil.copy2(page_path, output_path)
         return output_path
 
-    def import_page(self, input_path: str, name: str = None) -> str:
+    def import_page(self, input_path: str, name: str | None = None) -> str:
         """Import a page from a JSON file. Returns the new path."""
         input_path = os.path.expanduser(input_path)
         if not os.path.isfile(input_path):
@@ -186,16 +186,22 @@ class PageManager:
                     text = labels.get(pos, {}).get("text", "")
                     if text:
                         label_texts[pos] = text
-                state_details.append({
-                    "state": int(state_id),
-                    "image": media.get("path"),
-                    "labels": label_texts,
-                    "actions": [a.get("id", "unknown") for a in actions] if isinstance(actions, list) else [],
-                })
-            keys_info.append({
-                "coordinate": coord,
-                "states": state_details,
-            })
+                state_details.append(
+                    {
+                        "state": int(state_id),
+                        "image": media.get("path"),
+                        "labels": label_texts,
+                        "actions": [a.get("id", "unknown") for a in actions]
+                        if isinstance(actions, list)
+                        else [],
+                    }
+                )
+            keys_info.append(
+                {
+                    "coordinate": coord,
+                    "states": state_details,
+                }
+            )
 
         settings = data.get("settings", {})
         return {
@@ -239,12 +245,14 @@ class PageManager:
             size = os.path.getsize(path)
             # Extract timestamp from filename
             ts = f.replace("backup_", "").replace(".zip", "")
-            backups.append({
-                "filename": f,
-                "path": path,
-                "timestamp": ts,
-                "size_bytes": size,
-            })
+            backups.append(
+                {
+                    "filename": f,
+                    "path": path,
+                    "timestamp": ts,
+                    "size_bytes": size,
+                }
+            )
         return backups
 
     def restore_backup(self, backup_name: str) -> int:

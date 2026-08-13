@@ -2,7 +2,7 @@
 
 import json
 import os
-from typing import Any, Optional
+from typing import Any
 
 
 def load_json(path: str) -> dict:
@@ -12,7 +12,7 @@ def load_json(path: str) -> dict:
     try:
         with open(path) as f:
             return json.load(f)
-    except (json.JSONDecodeError, IOError):
+    except (OSError, json.JSONDecodeError):
         return {}
 
 
@@ -99,7 +99,7 @@ class SettingsManager:
     def save_page_settings(self, settings: dict):
         save_json(self.page_settings_path, settings)
 
-    def get_default_page(self, serial: str) -> Optional[str]:
+    def get_default_page(self, serial: str) -> str | None:
         settings = self.get_page_settings()
         return settings.get("default-pages", {}).get(serial)
 
@@ -121,7 +121,5 @@ class SettingsManager:
         if not os.path.isdir(decks_dir):
             return []
         return [
-            os.path.splitext(f)[0]
-            for f in os.listdir(decks_dir)
-            if f.endswith(".json")
+            os.path.splitext(f)[0] for f in os.listdir(decks_dir) if f.endswith(".json")
         ]

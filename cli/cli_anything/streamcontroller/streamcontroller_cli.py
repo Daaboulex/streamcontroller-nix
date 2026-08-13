@@ -5,17 +5,19 @@ import os
 import sys
 
 import click
-
-from cli_anything.streamcontroller.core.config import resolve_data_path, ensure_data_dirs
-from cli_anything.streamcontroller.core.pages import PageManager
 from cli_anything.streamcontroller.core.buttons import ButtonManager
-from cli_anything.streamcontroller.core.plugins import PluginManager
+from cli_anything.streamcontroller.core.config import (
+    ensure_data_dirs,
+    resolve_data_path,
+)
 from cli_anything.streamcontroller.core.devices import DeviceManager
+from cli_anything.streamcontroller.core.pages import PageManager
+from cli_anything.streamcontroller.core.plugins import PluginManager
 from cli_anything.streamcontroller.core.settings import SettingsManager
 from cli_anything.streamcontroller.utils.output import OutputFormatter
 
-
 # ---------- Context ----------
+
 
 class CLIContext:
     def __init__(self, data_path: str, json_mode: bool):
@@ -35,9 +37,12 @@ pass_ctx = click.make_pass_decorator(CLIContext)
 
 # ---------- Root group ----------
 
+
 @click.group(invoke_without_command=True)
 @click.option("--json", "json_mode", is_flag=True, help="Output in JSON format.")
-@click.option("--data-path", default=None, help="Override StreamController data directory.")
+@click.option(
+    "--data-path", default=None, help="Override StreamController data directory."
+)
 @click.pass_context
 def cli(ctx, json_mode, data_path):
     """StreamController CLI — manage Stream Deck configurations offline."""
@@ -51,6 +56,7 @@ def cli(ctx, json_mode, data_path):
 # ============================================================
 # PAGE commands
 # ============================================================
+
 
 @cli.group()
 def page():
@@ -176,6 +182,7 @@ def page_import(ctx, input_path, name):
 # BUTTON commands
 # ============================================================
 
+
 @cli.group()
 def button():
     """Manage buttons/keys on pages."""
@@ -201,8 +208,15 @@ def button_list(ctx, page_name):
                 action_str = ", ".join(k["actions"][:2])
                 if len(k["actions"]) > 2:
                     action_str += f" (+{len(k['actions']) - 2})"
-                rows.append([k["type"], k["coordinate"], k["states"],
-                             k["label"][:30], action_str[:40]])
+                rows.append(
+                    [
+                        k["type"],
+                        k["coordinate"],
+                        k["states"],
+                        k["label"][:30],
+                        action_str[:40],
+                    ]
+                )
             ctx.out.print_table(headers, rows)
     except FileNotFoundError as e:
         ctx.out.print_error(str(e))
@@ -221,11 +235,13 @@ def button_inspect(ctx, page_name, coord, state):
         if not state_data:
             ctx.out.print_error(f"No data at {coord} state {state}")
             sys.exit(1)
-        ctx.out.print_result({
-            "coordinate": coord,
-            "state": state,
-            "data": state_data,
-        })
+        ctx.out.print_result(
+            {
+                "coordinate": coord,
+                "state": state,
+                "data": state_data,
+            }
+        )
     except FileNotFoundError as e:
         ctx.out.print_error(str(e))
         sys.exit(1)
@@ -235,7 +251,9 @@ def button_inspect(ctx, page_name, coord, state):
 @click.argument("page_name")
 @click.argument("coord")
 @click.argument("text")
-@click.option("--position", "-p", default="bottom", type=click.Choice(["top", "center", "bottom"]))
+@click.option(
+    "--position", "-p", default="bottom", type=click.Choice(["top", "center", "bottom"])
+)
 @click.option("--state", "-s", default=0, type=int)
 @click.option("--font", default=None, help="Font family name.")
 @click.option("--size", default=None, type=int, help="Font size.")
@@ -248,10 +266,14 @@ def button_set_label(ctx, page_name, coord, text, position, state, font, size, c
         try:
             color_list = [int(c.strip()) for c in color.split(",")]
         except ValueError:
-            ctx.out.print_error("Invalid color format. Use R,G,B,A (e.g. 255,255,255,255)")
+            ctx.out.print_error(
+                "Invalid color format. Use R,G,B,A (e.g. 255,255,255,255)"
+            )
             sys.exit(1)
     try:
-        ctx.buttons.set_label(page_name, coord, position, text, state, font, size, color_list)
+        ctx.buttons.set_label(
+            page_name, coord, position, text, state, font, size, color_list
+        )
         ctx.out.print_success(f"Set {position} label on {coord} to '{text}'")
     except FileNotFoundError as e:
         ctx.out.print_error(str(e))
@@ -261,7 +283,9 @@ def button_set_label(ctx, page_name, coord, text, position, state, font, size, c
 @button.command("clear-label")
 @click.argument("page_name")
 @click.argument("coord")
-@click.option("--position", "-p", default="bottom", type=click.Choice(["top", "center", "bottom"]))
+@click.option(
+    "--position", "-p", default="bottom", type=click.Choice(["top", "center", "bottom"])
+)
 @click.option("--state", "-s", default=0, type=int)
 @pass_ctx
 def button_clear_label(ctx, page_name, coord, position, state):
@@ -372,6 +396,7 @@ def button_clear_actions(ctx, page_name, coord, state):
 # PLUGIN commands
 # ============================================================
 
+
 @cli.group()
 def plugin():
     """Manage installed plugins."""
@@ -427,6 +452,7 @@ def plugin_search(ctx, query):
 # DEVICE commands
 # ============================================================
 
+
 @cli.group()
 def device():
     """Manage Stream Deck devices."""
@@ -442,7 +468,9 @@ def device_list(ctx):
         ctx.out.print_result(devices)
     else:
         if not devices:
-            click.echo("No known devices. Connect a Stream Deck and run StreamController first.")
+            click.echo(
+                "No known devices. Connect a Stream Deck and run StreamController first."
+            )
             return
         headers = ["Serial", "Brightness", "Default Page", "Screensaver"]
         rows = []
@@ -476,16 +504,23 @@ def device_models(ctx):
         headers = ["Model", "Cols", "Rows", "Keys", "Dials", "Touch"]
         rows = []
         for m in models:
-            rows.append([
-                m["model"], m["cols"], m["rows"], m["keys"],
-                m.get("dials", 0), "Yes" if m.get("touchscreen") else "No"
-            ])
+            rows.append(
+                [
+                    m["model"],
+                    m["cols"],
+                    m["rows"],
+                    m["keys"],
+                    m.get("dials", 0),
+                    "Yes" if m.get("touchscreen") else "No",
+                ]
+            )
         ctx.out.print_table(headers, rows)
 
 
 # ============================================================
 # SETTINGS commands
 # ============================================================
+
 
 @cli.group()
 def settings():
@@ -559,6 +594,7 @@ def settings_default_page(ctx, serial, page_name):
 # BACKUP commands
 # ============================================================
 
+
 @cli.group()
 def backup():
     """Manage page backups."""
@@ -599,7 +635,10 @@ def backup_list(ctx):
 def backup_restore(ctx, backup_name, yes):
     """Restore pages from a backup."""
     if not yes and not ctx.json_mode:
-        click.confirm(f"Restore from backup '{backup_name}'? This may overwrite existing pages.", abort=True)
+        click.confirm(
+            f"Restore from backup '{backup_name}'? This may overwrite existing pages.",
+            abort=True,
+        )
     try:
         count = ctx.pages.restore_backup(backup_name)
         ctx.out.print_success(f"Restored {count} pages from backup", {"count": count})
@@ -611,6 +650,7 @@ def backup_restore(ctx, backup_name, yes):
 # ============================================================
 # REPL mode
 # ============================================================
+
 
 @cli.command("repl")
 @click.pass_context
@@ -634,7 +674,11 @@ def repl_cmd(click_ctx):
             click.echo("Bye!")
             break
         if line == "help":
-            click.echo(click_ctx.parent.get_help() if click_ctx.parent else click_ctx.get_help())
+            click.echo(
+                click_ctx.parent.get_help()
+                if click_ctx.parent
+                else click_ctx.get_help()
+            )
             continue
 
         # Parse and execute the command
@@ -652,6 +696,7 @@ def repl_cmd(click_ctx):
 # ============================================================
 # Entry point
 # ============================================================
+
 
 def main():
     cli()

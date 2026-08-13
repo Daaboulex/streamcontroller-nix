@@ -8,9 +8,8 @@ import sys
 import tempfile
 import unittest
 
-from click.testing import CliRunner
-
 from cli_anything.streamcontroller.streamcontroller_cli import cli
+from click.testing import CliRunner
 
 
 class TestCLIBase(unittest.TestCase):
@@ -25,11 +24,14 @@ class TestCLIBase(unittest.TestCase):
         shutil.rmtree(self.tmpdir)
 
     def invoke(self, args, **kwargs):
-        return self.runner.invoke(cli, self.base_args + args, catch_exceptions=False, **kwargs)
+        return self.runner.invoke(
+            cli, self.base_args + args, catch_exceptions=False, **kwargs
+        )
 
     def invoke_json(self, args, **kwargs):
-        return self.runner.invoke(cli, ["--json"] + self.base_args + args,
-                                 catch_exceptions=False, **kwargs)
+        return self.runner.invoke(
+            cli, ["--json", *self.base_args, *args], catch_exceptions=False, **kwargs
+        )
 
 
 class TestPageCLI(TestCLIBase):
@@ -139,8 +141,12 @@ class TestButtonCLI(TestCLIBase):
 
     def test_button_set_label_positions(self):
         self.invoke(["button", "set-label", "TestPage", "0x0", "Top", "-p", "top"])
-        self.invoke(["button", "set-label", "TestPage", "0x0", "Center", "-p", "center"])
-        self.invoke(["button", "set-label", "TestPage", "0x0", "Bottom", "-p", "bottom"])
+        self.invoke(
+            ["button", "set-label", "TestPage", "0x0", "Center", "-p", "center"]
+        )
+        self.invoke(
+            ["button", "set-label", "TestPage", "0x0", "Bottom", "-p", "bottom"]
+        )
 
         result = self.invoke_json(["button", "inspect", "TestPage", "0x0"])
         data = json.loads(result.output)
@@ -170,8 +176,17 @@ class TestButtonCLI(TestCLIBase):
         self.assertEqual(result.exit_code, 0)
 
     def test_button_set_action(self):
-        result = self.invoke(["button", "set-action", "TestPage", "0x0",
-                              "test::Action", "--settings", '{"key": "val"}'])
+        result = self.invoke(
+            [
+                "button",
+                "set-action",
+                "TestPage",
+                "0x0",
+                "test::Action",
+                "--settings",
+                '{"key": "val"}',
+            ]
+        )
         self.assertEqual(result.exit_code, 0)
 
     def test_button_add_action(self):
@@ -321,9 +336,20 @@ class TestWorkflow(TestCLIBase):
         self.invoke(["button", "set-image", "Streaming", "0x0", img])
         self.invoke(["button", "set-action", "Streaming", "0x0", "audio::ToggleMute"])
 
-        self.invoke(["button", "set-label", "Streaming", "1x0", "Scene 1", "-p", "bottom"])
-        self.invoke(["button", "set-action", "Streaming", "1x0", "obs::SwitchScene",
-                      "--settings", '{"scene": "Main"}'])
+        self.invoke(
+            ["button", "set-label", "Streaming", "1x0", "Scene 1", "-p", "bottom"]
+        )
+        self.invoke(
+            [
+                "button",
+                "set-action",
+                "Streaming",
+                "1x0",
+                "obs::SwitchScene",
+                "--settings",
+                '{"scene": "Main"}',
+            ]
+        )
 
         # Verify setup
         result = self.invoke_json(["button", "list", "Streaming"])
@@ -413,14 +439,21 @@ class TestCLISubprocess(unittest.TestCase):
     def _resolve_cli(name):
         """Resolve CLI binary path — prefer PATH, fall back to python -m."""
         import shutil as sh
+
         path = sh.which(name)
         if path:
             return [path]
         # Check if forced to use installed
         if os.environ.get("CLI_ANYTHING_FORCE_INSTALLED"):
-            raise RuntimeError(f"CLI_ANYTHING_FORCE_INSTALLED is set but '{name}' not found in PATH")
+            raise RuntimeError(
+                f"CLI_ANYTHING_FORCE_INSTALLED is set but '{name}' not found in PATH"
+            )
         # Fall back to python -m
-        return [sys.executable, "-m", "cli_anything.streamcontroller.streamcontroller_cli"]
+        return [
+            sys.executable,
+            "-m",
+            "cli_anything.streamcontroller.streamcontroller_cli",
+        ]
 
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
@@ -431,8 +464,10 @@ class TestCLISubprocess(unittest.TestCase):
 
     def run_cli(self, args):
         result = subprocess.run(
-            self.cli_cmd + ["--data-path", self.tmpdir] + args,
-            capture_output=True, text=True, timeout=30,
+            [*self.cli_cmd, "--data-path", self.tmpdir, *args],
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         return result
 
