@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "streamcontroller-cli"
+version = "0.1.0"
+description = "Offline CLI for StreamController -- manage Stream Deck pages, buttons, plugins, and settings"
+requires-python = ">=3.8"
+dependencies = ["click>=8.0"]
+
+[[project.authors]]
+name = "Daaboulex"
+
+[project.scripts]
+streamcontroller-cli = "cli_anything.streamcontroller.streamcontroller_cli:main"
+
+[tool.setuptools.packages.find]
+include = ["cli_anything*"]
+namespaces = true
