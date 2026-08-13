@@ -37,7 +37,7 @@
         streamcontroller = final.callPackage ./package.nix { };
       };
       flake.nixosModules.default = import ./module.nix;
-      flake.homeManagerModules.default = import ./hm-module.nix;
+      flake.homeModules.default = import ./hm-module.nix;
 
       perSystem =
         {

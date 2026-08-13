@@ -26,7 +26,7 @@ Nix flake for [StreamController](https://github.com/StreamController/StreamContr
 | `streamcontroller` | package | StreamController app (de-Flatpaked native Linux build via `patches/native-linux.patch`) |
 | `streamcontroller-cli` | package | Offline CLI (Click + Python) for page/button/device/plugin management |
 | `nixosModules.default` | NixOS module | `programs.streamcontroller` — package install + udev rules + optional XDG autostart |
-| `homeManagerModules.default` | HM module | Declarative `programs.streamcontroller.pages.*` config — emits page JSON, deploys assets, maps device serials to default pages |
+| `homeModules.default` | HM module | Declarative `programs.streamcontroller.pages.*` config — emits page JSON, deploys assets, maps device serials to default pages |
 | `export-config.sh` | shell script | Reads existing page JSONs and emits a ready-to-paste `programs.streamcontroller` Nix attrset |
 
 ## What it does
@@ -90,7 +90,7 @@ imports = [ inputs.streamcontroller.nixosModules.default ];
 Import the Home Manager module:
 
 ```nix
-home-manager.sharedModules = [ inputs.streamcontroller.homeManagerModules.default ];
+home-manager.sharedModules = [ inputs.streamcontroller.homeModules.default ];
 ```
 
 <!-- END generated:installation -->
@@ -121,7 +121,7 @@ Import in your Home Manager config:
 ```nix
 # In your flake, add to Home Manager sharedModules:
 home-manager.sharedModules = [
-  inputs.streamcontroller.homeManagerModules.default
+  inputs.streamcontroller.homeModules.default
 ];
 ```
 
