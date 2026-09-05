@@ -294,6 +294,11 @@ in
       description = "Declarative page definitions. Keys are page names.";
     };
 
+    pageFiles = lib.mkOption {
+      type = lib.types.attrsOf lib.types.path;
+      default = { };
+      description = "Page files in StreamController's own JSON, installed as pages/<name>.json beside the declarative pages. Keys are page names.";
+    };
     # Default page per device
     defaultPages = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
@@ -378,7 +383,7 @@ in
 
     # Deploy assets and declarative page files via activation hook
     home.activation.streamcontrollerPages =
-      lib.mkIf (cfg.pages != { } || cfg.defaultPages != { } || cfg.assets != { })
+      lib.mkIf (cfg.pages != { } || cfg.pageFiles != { } || cfg.defaultPages != { } || cfg.assets != { })
         (
           lib.hm.dag.entryAfter [ "writeBoundary" ] ''
             mkdir -p "${dataDir}/pages"
@@ -408,6 +413,14 @@ in
                   fi
                 ''
               ) cfg.pages
+            )}
+            ${lib.concatStringsSep "\n" (
+              lib.mapAttrsToList (name: pageFile: ''
+                if ! cmp -s "${pageFile}" "${dataDir}/pages/${name}.json" 2>/dev/null; then
+                  install -m 644 "${pageFile}" "${dataDir}/pages/${name}.json"
+                  echo "StreamController: updated page '${name}'"
+                fi
+              '') cfg.pageFiles
             )}
 
             ${lib.optionalString (cfg.defaultPages != { }) ''

@@ -125,6 +125,14 @@ home-manager.sharedModules = [
 ];
 ```
 
+A page the app itself saved can be handed over as it is:
+
+```nix
+programs.streamcontroller.pageFiles.Default = ./pages/Default.json;
+```
+
+It lands as `pages/Default.json` next to the declarative pages, and the same install rule applies: the file is copied again whenever it differs from what is deployed.
+
 ### Example configuration
 
 ```nix
