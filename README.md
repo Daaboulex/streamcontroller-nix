@@ -23,7 +23,7 @@ Nix flake for [StreamController](https://github.com/StreamController/StreamContr
 
 | Component | Type | Description |
 |---|---|---|
-| `streamcontroller` | package | StreamController app (de-Flatpaked native Linux build via `patches/native-linux.patch`) |
+| `streamcontroller` | package | StreamController app (native Linux build; the wrapper passes upstream's `--data $XDG_DATA_HOME/StreamController`, so data stays out of `~/.var/app`) |
 | `streamcontroller-cli` | package | Offline CLI (Click + Python) for page/button/device/plugin management |
 | `nixosModules.default` | NixOS module | `programs.streamcontroller` — package install + udev rules + optional XDG autostart |
 | `homeModules.default` | HM module | Declarative `programs.streamcontroller.pages.*` config — emits page JSON, deploys assets, maps device serials to default pages |
@@ -431,8 +431,6 @@ streamcontroller-nix/
 ├── module.nix                 # NixOS module (udev, autostart, systemPackages)
 ├── hm-module.nix              # Home Manager module (declarative page config)
 ├── export-config.sh           # Export current pages as Nix attrset
-├── patches/
-│   └── native-linux.patch     # De-Flatpak patch for native Linux
 ├── cli/
 │   ├── package.nix            # CLI package definition
 │   ├── setup.py               # Python setuptools config

@@ -342,9 +342,13 @@ in
             rm -rf "$venv"
             _req="$(dirname "$venv")/requirements.txt"
             if [ -f "$_req" ]; then
-              ${cfg.package}/bin/streamcontroller --help >/dev/null 2>&1 || true
-              ${pkgs.python3}/bin/python3 -m virtualenv --system-site-packages "$venv" 2>/dev/null || true
-              "$venv/bin/pip" install -r "$_req" 2>/dev/null || true
+              if ! ${pkgs.python3}/bin/python3 -m virtualenv --system-site-packages "$venv"; then
+                warnEcho "StreamController: could not recreate the venv for $_plugin; the plugin stays broken until the next activation"
+                continue
+              fi
+              if ! "$venv/bin/pip" install -r "$_req"; then
+                warnEcho "StreamController: pip could not install $_plugin's requirements; the plugin may fail to load"
+              fi
             fi
           fi
         done

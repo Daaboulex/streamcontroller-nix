@@ -174,10 +174,6 @@ python3Packages.stdenv.mkDerivation {
     python
   ];
 
-  patches = [
-    ./patches/native-linux.patch
-  ];
-
   postPatch = ''
         # Fix: upstream references DeviceManager.USB_VID_ELGATO which doesn't exist —
         # USB_VID_ELGATO is defined on USBVendorIDs, not DeviceManager.
@@ -224,7 +220,7 @@ python3Packages.stdenv.mkDerivation {
     mkdir -p $out/bin
     cat > $out/bin/streamcontroller <<WRAPPER
     #!/bin/sh
-    exec ${python}/bin/python3 $out/share/streamcontroller/main.py "\$@"
+    exec ${python}/bin/python3 $out/share/streamcontroller/main.py --data "\''${XDG_DATA_HOME:-\$HOME/.local/share}/StreamController" "\$@"
     WRAPPER
     chmod +x $out/bin/streamcontroller
 
