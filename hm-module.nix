@@ -278,12 +278,14 @@ in
     package = lib.mkOption {
       type = lib.types.package;
       default = pkgs.streamcontroller;
+      defaultText = lib.literalExpression "pkgs.streamcontroller";
       description = "The StreamController package to use.";
     };
 
     dataPath = lib.mkOption {
       type = lib.types.str;
       default = "${config.xdg.dataHome}/StreamController";
+      defaultText = lib.literalExpression ''"''${config.xdg.dataHome}/StreamController"'';
       description = "StreamController data directory path.";
     };
 
@@ -313,9 +315,11 @@ in
     assets = lib.mkOption {
       type = lib.types.attrsOf lib.types.path;
       default = { };
-      example = {
-        "my-icon.png" = ./icons/my-icon.png;
-      };
+      example = lib.literalExpression ''
+        {
+          "my-icon.png" = ./icons/my-icon.png;
+        }
+      '';
       description = "Asset files to copy into the StreamController data directory. Keys are filenames, values are source paths. Files are placed at <dataPath>/assets/<key>.";
     };
 

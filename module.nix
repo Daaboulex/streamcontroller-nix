@@ -21,6 +21,7 @@ in
     package = lib.mkOption {
       type = lib.types.package;
       default = pkgs.streamcontroller;
+      defaultText = lib.literalExpression "pkgs.streamcontroller";
       description = "The StreamController package to use.";
     };
 
