@@ -31,7 +31,15 @@
         "aarch64-linux"
       ];
 
-      imports = [ inputs.std.flakeModules.base ];
+      imports = [
+        inputs.std.flakeModules.base
+        {
+          perSystem.std.option-reference = {
+            "NixOS module" = ./module.nix;
+            "Home Manager module" = ./hm-module.nix;
+          };
+        }
+      ];
 
       flake.overlays.default = final: _prev: {
         streamcontroller = final.callPackage ./package.nix { };
