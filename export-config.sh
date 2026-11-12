@@ -181,7 +181,7 @@ emit_label_pos() {
   font_size=$(echo "$pos_json" | jq -r '."font-size" // empty')
   # Convert whole-number floats to integers (HM module expects nullOr int)
   [[ -n $font_size ]] && font_size=$(echo "$font_size" | jq -r 'if . == floor then (floor | tostring) else . end')
-  color=$(echo "$pos_json" | jq -r '.color // empty')
+  color=$(echo "$pos_json" | jq -c '.color // empty')
   font_family=$(echo "$pos_json" | jq -r '."font-family" // empty')
   font_weight=$(echo "$pos_json" | jq -r '."font-weight" // empty')
   [[ -n $font_weight ]] && font_weight=$(echo "$font_weight" | jq -r 'if . == floor then (floor | tostring) else . end')
@@ -201,7 +201,11 @@ emit_label_pos() {
   inner_pad=$(printf '%*s' "$((indent_n + 2))" '')
   [[ -n $text ]] && echo "${inner_pad}text = \"$(nix_escape "$text")\";"
   [[ -n $font_size ]] && echo "${inner_pad}size = ${font_size};"
-  [[ -n $color ]] && echo "${inner_pad}color = \"$(nix_escape "$color")\";"
+  if [[ -n $color ]]; then
+    printf '%s' "${inner_pad}color = "
+    json_to_nix "$color" "$((indent_n + 2))"
+    printf ';\n'
+  fi
   [[ -n $font_family ]] && echo "${inner_pad}font-family = \"$(nix_escape "$font_family")\";"
   [[ -n $font_weight ]] && echo "${inner_pad}font-weight = ${font_weight};"
   [[ -n $outline_width ]] && echo "${inner_pad}outline_width = ${outline_width};"
@@ -263,9 +267,11 @@ emit_state() {
 
   # Background color
   local bg_json
-  bg_json=$(echo "$state_json" | jq -r '.background.color // empty' 2>/dev/null)
+  bg_json=$(echo "$state_json" | jq -c '.background.color // empty' 2>/dev/null)
   if [[ -n $bg_json ]]; then
-    echo "${inner_pad}background = \"$(nix_escape "$bg_json")\";"
+    printf '%s' "${inner_pad}background = "
+    json_to_nix "$bg_json" "$((indent_n + 2))"
+    printf ';\n'
   fi
 
   # Actions
@@ -365,7 +371,7 @@ output_body() {
       num_defaults=$(echo "$default_pages" | jq 'length')
       if [[ $num_defaults -gt 0 ]]; then
         echo "  defaultPages = {"
-        echo "$default_pages" | jq -r 'to_entries[] | "    \"\(.key)\" = \"\(.value)\";"'
+        echo "$default_pages" | jq -r 'to_entries[] | select(.value != null) | "    \"\(.key)\" = \"\(.value | split("/") | last | rtrimstr(".json"))\";"'
         echo "  };"
         echo ""
       fi

@@ -121,9 +121,11 @@ streamcontroller-cli --json device list
 ## When something does not work
 
 A plugin keeps its own Python environment, and a system update that replaces
-Python breaks it. At every activation the Home Manager module removes an
-environment whose Python is gone and, for a plugin with a `requirements.txt`,
-builds it again. It prints a warning when that fails.
+Python breaks it. At every activation the Home Manager module finds an
+environment whose Python is gone. For a plugin with a `requirements.txt` it
+builds a new one with the Python the package runs on. When that fails it
+prints a warning, keeps the old environment and tries again at the next
+activation. Without a `requirements.txt` the broken environment is removed.
 
 Before changing pages with the command-line tool, take a backup with
 `streamcontroller-cli backup create`. `backup restore` brings one back.

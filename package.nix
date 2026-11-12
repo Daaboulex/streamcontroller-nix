@@ -201,11 +201,11 @@ python3Packages.stdenv.mkDerivation {
             log.info(f"Launching backend: {command}")'
 
         # Disable the app's built-in autostart mechanism on native installs.
-        # NixOS module.nix and Home Manager handle autostart properly —
+        # The autostart option of the NixOS module (module.nix) replaces it —
         # the app's mechanism copies desktop files to ~/.config/autostart/
         # which conflicts with declarative management.
         substituteInPlace autostart.py \
-          --replace-fail 'setup_autostart_desktop_entry(True, True)' 'return  # Nix: autostart handled by NixOS/HM'
+          --replace-fail 'setup_autostart_desktop_entry(True, True)' 'return  # Nix: autostart handled by the NixOS module'
   '';
 
   dontBuild = true;

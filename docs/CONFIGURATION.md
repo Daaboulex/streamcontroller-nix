@@ -198,7 +198,19 @@ is deployed.
 ## What the module writes
 
 Pages are written to `<dataPath>/pages/<name>.json`. Default pages are written
-to `<dataPath>/settings/pages.json`.
+to `<dataPath>/settings/pages.json`, each page name as the path of its page
+file, which is the form StreamController reads:
+
+```json
+{
+  "default-pages": {
+    "AL22K2C74512": "/home/you/.local/share/StreamController/pages/Default.json"
+  }
+}
+```
+
+A colour, of a label or of a key's background, is a list of red, green, blue
+and alpha, each from 0 to 255. A page looks like this:
 
 ```json
 {
@@ -210,8 +222,9 @@ to `<dataPath>/settings/pages.json`.
       "states": {
         "0": {
           "labels": {
-            "center": { "text": "Hello", "font-size": 14, "color": "FFFFFFFF" }
+            "center": { "text": "Hello", "font-size": 14, "color": [255, 255, 255, 255] }
           },
+          "background": { "color": [0, 0, 0, 255] },
           "media": { "path": "/nix/store/.../icon.png", "size": 0.7 },
           "actions": [],
           "image-control-action": 0,

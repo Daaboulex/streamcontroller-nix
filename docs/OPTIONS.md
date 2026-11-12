@@ -40,9 +40,9 @@ Type: `string`. Default: `"${config.xdg.dataHome}/StreamController"`.
 
 ### `programs.streamcontroller.defaultPages`
 
-Map of device serial numbers to their default page name.
+Map of device serial numbers to their default page name. The module writes it as the path of <dataPath>/pages/<name>.json, the form StreamController reads.
 
-Type: `attribute set of string`. Default: `{ }`.
+Type: `attribute set of string matching the pattern [^/]+`. Default: `{ }`.
 
 Example:
 
@@ -143,9 +143,9 @@ Type: `list of (attribute set)`. Default: `[ ]`.
 
 ### `programs.streamcontroller.pages.<name>.keys.<name>.states.<name>.background`
 
-Background colour as hex RRGGBBAA
+Background colour as a list of red, green, blue and alpha, each 0 to 255
 
-Type: `null or string`. Default: `null`.
+Type: `null or (list of 8 bit unsigned integer; between 0 and 255 (both inclusive))`. Default: `null`.
 
 ### `programs.streamcontroller.pages.<name>.keys.<name>.states.<name>.background-control-action`
 
@@ -173,9 +173,9 @@ Type: `submodule`. Default: `{ }`.
 
 ### `programs.streamcontroller.pages.<name>.keys.<name>.states.<name>.label.bottom.color`
 
-Label colour as RRGGBBAA hex string
+Label colour as a list of red, green, blue and alpha, each 0 to 255
 
-Type: `null or string`. Default: `null`.
+Type: `null or (list of 8 bit unsigned integer; between 0 and 255 (both inclusive))`. Default: `null`.
 
 ### `programs.streamcontroller.pages.<name>.keys.<name>.states.<name>.label.bottom.font-family`
 
@@ -215,9 +215,9 @@ Type: `submodule`. Default: `{ }`.
 
 ### `programs.streamcontroller.pages.<name>.keys.<name>.states.<name>.label.center.color`
 
-Label colour as RRGGBBAA hex string
+Label colour as a list of red, green, blue and alpha, each 0 to 255
 
-Type: `null or string`. Default: `null`.
+Type: `null or (list of 8 bit unsigned integer; between 0 and 255 (both inclusive))`. Default: `null`.
 
 ### `programs.streamcontroller.pages.<name>.keys.<name>.states.<name>.label.center.font-family`
 
@@ -257,9 +257,9 @@ Type: `submodule`. Default: `{ }`.
 
 ### `programs.streamcontroller.pages.<name>.keys.<name>.states.<name>.label.top.color`
 
-Label colour as RRGGBBAA hex string
+Label colour as a list of red, green, blue and alpha, each 0 to 255
 
-Type: `null or string`. Default: `null`.
+Type: `null or (list of 8 bit unsigned integer; between 0 and 255 (both inclusive))`. Default: `null`.
 
 ### `programs.streamcontroller.pages.<name>.keys.<name>.states.<name>.label.top.font-family`
 

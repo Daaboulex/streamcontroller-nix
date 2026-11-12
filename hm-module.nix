@@ -12,7 +12,7 @@ let
   cfg = config.programs.streamcontroller;
 
   # StreamController uses ~/.var/app/com.core447.StreamController/data for flatpak
-  # or XDG_DATA_HOME/streamcontroller for native
+  # or XDG_DATA_HOME/StreamController for native
   dataDir = cfg.dataPath;
 
   # Filter out null values from an attrset (non-recursive)
@@ -89,7 +89,9 @@ let
 
   # Build the default-pages JSON
   defaultPagesJson = pkgs.writeText "streamcontroller-default-pages.json" (
-    builtins.toJSON { default-pages = cfg.defaultPages; }
+    builtins.toJSON {
+      default-pages = builtins.mapAttrs (_serial: page: "${dataDir}/pages/${page}.json") cfg.defaultPages;
+    }
   );
 
   labelPositionSubmodule = lib.types.submodule {
@@ -105,9 +107,9 @@ let
         description = "Label font size";
       };
       color = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
+        type = lib.types.nullOr (lib.types.listOf lib.types.ints.u8);
         default = null;
-        description = "Label colour as RRGGBBAA hex string";
+        description = "Label colour as a list of red, green, blue and alpha, each 0 to 255";
       };
       font-family = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
@@ -193,9 +195,9 @@ let
         description = "Media (image/icon) configuration";
       };
       background = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
+        type = lib.types.nullOr (lib.types.listOf lib.types.ints.u8);
         default = null;
-        description = "Background colour as hex RRGGBBAA";
+        description = "Background colour as a list of red, green, blue and alpha, each 0 to 255";
       };
       actions = lib.mkOption {
         type = lib.types.listOf lib.types.attrs;
@@ -303,12 +305,12 @@ in
     };
     # Default page per device
     defaultPages = lib.mkOption {
-      type = lib.types.attrsOf lib.types.str;
+      type = lib.types.attrsOf (lib.types.strMatching "[^/]+");
       default = { };
       example = {
         "CL12345678" = "Main";
       };
-      description = "Map of device serial numbers to their default page name.";
+      description = "Map of device serial numbers to their default page name. The module writes it as the path of <dataPath>/pages/<name>.json, the form StreamController reads.";
     };
 
     # Asset files (icons, images) to copy into the data directory
@@ -334,25 +336,33 @@ in
   config = lib.mkIf cfg.enable {
     # Recreate broken plugin venvs after Python updates.
     # NixOS Python updates change store paths, breaking venv symlinks.
-    # This rebuilds any venv whose python3 is missing.
+    # This rebuilds any venv whose python3 is missing, or removes it without a requirements.txt.
     home.activation.streamcontrollerFixVenvs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       _plugins="${dataDir}/plugins"
       if [ -d "$_plugins" ]; then
+        for _interrupted in "$_plugins"/*/.venv.broken; do
+          [ -d "$_interrupted" ] || continue
+          rm -rf "''${_interrupted%.broken}"
+          mv "$_interrupted" "''${_interrupted%.broken}"
+        done
         for venv in "$_plugins"/*/.venv; do
           [ -d "$venv" ] || continue
           if [ ! -f "$venv/bin/python3" ]; then
             _plugin="$(basename "$(dirname "$venv")")"
-            echo "StreamController: recreating broken venv for $_plugin"
-            rm -rf "$venv"
             _req="$(dirname "$venv")/requirements.txt"
             if [ -f "$_req" ]; then
-              if ! ${pkgs.python3}/bin/python3 -m virtualenv --system-site-packages "$venv"; then
-                warnEcho "StreamController: could not recreate the venv for $_plugin; the plugin stays broken until the next activation"
-                continue
+              echo "StreamController: recreating broken venv for $_plugin"
+              mv "$venv" "$venv.broken"
+              if ${cfg.package.python}/bin/python3 -m virtualenv --system-site-packages "$venv" && "$venv/bin/pip" install -r "$_req"; then
+                rm -rf "$venv.broken"
+              else
+                rm -rf "$venv"
+                mv "$venv.broken" "$venv"
+                warnEcho "StreamController: could not recreate the venv for $_plugin; the old one is kept and the next activation tries again"
               fi
-              if ! "$venv/bin/pip" install -r "$_req"; then
-                warnEcho "StreamController: pip could not install $_plugin's requirements; the plugin may fail to load"
-              fi
+            else
+              echo "StreamController: removing broken venv for $_plugin"
+              rm -rf "$venv"
             fi
           fi
         done
@@ -414,7 +424,6 @@ in
                   pageFile = mkPageFile name _pageCfg;
                 in
                 ''
-                  # Only overwrite if content changed (preserve manual edits if Nix config unchanged)
                   if ! cmp -s "${pageFile}" "${dataDir}/pages/${name}.json" 2>/dev/null; then
                     install -m 644 "${pageFile}" "${dataDir}/pages/${name}.json"
                     echo "StreamController: updated page '${name}'"
