@@ -27,7 +27,7 @@ Nix flake for [StreamController](https://github.com/StreamController/StreamContr
 | `streamcontroller-cli` | package | Offline CLI (Click + Python) for page/button/device/plugin management |
 | `nixosModules.default` | NixOS module | `programs.streamcontroller` — package install + udev rules + optional XDG autostart |
 | `homeModules.default` | HM module | Declarative `programs.streamcontroller.pages.*` config — emits page JSON, deploys assets, maps device serials to default pages |
-| `export-config.sh` | shell script | Reads existing page JSONs and emits a ready-to-paste `programs.streamcontroller` Nix attrset |
+| [`export-config.sh`](./export-config.sh) | shell script | Reads existing page JSONs and emits a ready-to-paste `programs.streamcontroller` Nix attrset |
 
 ## What it does
 
@@ -37,19 +37,7 @@ The NixOS module handles package installation, udev rules for USB device access,
 
 ### Supported devices
 
-All Elgato Stream Deck models are supported:
-
-| Model | Keys | Layout |
-|---|---|---|
-| Stream Deck Mini | 6 | 3x2 |
-| Stream Deck Mini MK.2 | 6 | 3x2 |
-| Stream Deck (Original) | 15 | 5x3 |
-| Stream Deck MK.2 | 15 | 5x3 |
-| Stream Deck XL | 32 | 8x4 |
-| Stream Deck XL V2 | 32 | 8x4 |
-| Stream Deck + (Plus) | 8 keys + 4 dials + touchscreen | 4x2 |
-| Stream Deck Pedal | 3 | 3x1 |
-| Stream Deck Neo | 8 + 2 touch buttons | 4x2 |
+The models the CLI knows, with the key layout of each, are `DECK_MODELS` in [`core/config.py`](./cli/cli_anything/streamcontroller/core/config.py), and `streamcontroller-cli device models` prints them.
 
 ### Key coordinate system
 
@@ -274,10 +262,10 @@ streamcontroller-cli page delete "Old Page" --yes
 
 # Button editing
 streamcontroller-cli button list Default
-streamcontroller-cli button set-label Default 0x0 --position center --text "Hello" --size 14
-streamcontroller-cli button set-image Default 1x1 --path /path/to/icon.png
-streamcontroller-cli button set-action Default 0x0 '{"id": "com_core447_OSPlugin::RunCommand", "settings": {"command": "echo hi"}}'
-streamcontroller-cli button add-action Default 0x0 '{"id": "...", "settings": {...}}'
+streamcontroller-cli button set-label Default 0x0 "Hello" --position center --size 14
+streamcontroller-cli button set-image Default 1x1 /path/to/icon.png
+streamcontroller-cli button set-action Default 0x0 com_core447_OSPlugin::RunCommand --settings '{"command": "echo hi"}'
+streamcontroller-cli button add-action Default 0x0 com_core447_OSPlugin::RunCommand --settings '{"command": "echo again"}'
 streamcontroller-cli button clear-label Default 0x0 --position center
 streamcontroller-cli button clear-image Default 0x0
 streamcontroller-cli button clear-actions Default 0x0
@@ -296,13 +284,13 @@ streamcontroller-cli plugin search "media"
 streamcontroller-cli settings show
 streamcontroller-cli settings set key.path value
 streamcontroller-cli settings get key.path
-streamcontroller-cli settings deck-brightness AL22K2C74512 75
+streamcontroller-cli settings brightness AL22K2C74512 75
 streamcontroller-cli settings default-page AL22K2C74512 Default
 
 # Backups
-streamcontroller-cli backup create --comment "before changes"
+streamcontroller-cli backup create
 streamcontroller-cli backup list
-streamcontroller-cli backup restore 2024-01-15_143000
+streamcontroller-cli backup restore backup_20240115T143000
 
 # JSON output mode (for scripting)
 streamcontroller-cli --json page list
@@ -311,58 +299,7 @@ streamcontroller-cli --json device list
 
 ## Options reference
 
-### NixOS module
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `programs.streamcontroller.enable` | bool | `false` | Install StreamController and udev rules |
-| `programs.streamcontroller.package` | package | `streamcontroller` | Package to use |
-| `programs.streamcontroller.autostart` | bool | `false` | Create XDG autostart entry |
-
-### Home Manager module
-
-#### Top-level options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `enable` | bool | `false` | Enable declarative page management |
-| `package` | package | `streamcontroller` | Package to use |
-| `dataPath` | string | `$XDG_DATA_HOME/StreamController` | Data directory |
-| `pages` | lazyAttrsOf submodule | `{}` | Page definitions |
-| `defaultPages` | attrsOf string | `{}` | Device serial to default page mapping |
-| `assets` | attrsOf path | `{}` | Asset files copied to `<dataPath>/assets/` |
-| `extraCommands` | listOf string | `[]` | Extra shell commands to run after config |
-
-#### Page submodule
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `keys` | lazyAttrsOf keySubmodule | `{}` | Key definitions (`COLxROW` coordinates) |
-| `brightness.value` | nullOr int | `null` | Page brightness (0-100) |
-| `brightness.overwrite` | bool | `false` | Whether to overwrite device brightness |
-| `screensaver` | nullOr attrs | `null` | Screensaver settings |
-| `extraConfig` | attrs | `{}` | Additional top-level page JSON attributes |
-
-#### State submodule (per key state)
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `label.{top,center,bottom}.text` | nullOr str | `null` | Label text |
-| `label.{top,center,bottom}.size` | nullOr int | `null` | Label font size |
-| `label.{top,center,bottom}.color` | nullOr str | `null` | Label colour (RRGGBBAA hex) |
-| `label.{top,center,bottom}.font-family` | nullOr str | `null` | Label font family |
-| `label.{top,center,bottom}.font-weight` | nullOr int | `null` | Label font weight |
-| `label.{top,center,bottom}.outline_width` | nullOr int | `null` | Label outline width (px) |
-| `media.path` | nullOr str | `null` | Path to media file |
-| `media.size` | nullOr (either int float) | `null` | Media size (px or scale factor) |
-| `media.valign` | nullOr str | `null` | Vertical alignment |
-| `background` | nullOr str | `null` | Background colour (hex RRGGBBAA) |
-| `actions` | listOf attrs | `[]` | Plugin-specific action definitions |
-| `image-control-action` | nullOr int | `0` | Image control action |
-| `label-control-actions` | listOf int | `[0 0 0]` | Label control actions (top, center, bottom) |
-| `background-control-action` | nullOr int | `0` | Background control action |
-
-All options under `programs.streamcontroller` are prefixed accordingly (e.g., `programs.streamcontroller.pages.main.keys."0x0".states."0".label.center.text`).
+The NixOS options are declared in [`module.nix`](./module.nix) and the Home Manager options in [`hm-module.nix`](./hm-module.nix), each with its type, default and description.
 
 ### Assets
 
@@ -422,35 +359,6 @@ bash export-config.sh --data-dir ~/.var/app/com.core447.StreamController/data
 
 This reads all page JSONs and default page settings, then outputs valid Nix ready to paste into your `programs.streamcontroller` block. Requires `jq`.
 
-## Repository structure
-
-```text
-streamcontroller-nix/
-├── flake.nix                  # Flake definition (packages, overlay, modules)
-├── package.nix                # StreamController application package
-├── module.nix                 # NixOS module (udev, autostart, systemPackages)
-├── hm-module.nix              # Home Manager module (declarative page config)
-├── export-config.sh           # Export current pages as Nix attrset
-├── cli/
-│   ├── package.nix            # CLI package definition
-│   ├── setup.py               # Python setuptools config
-│   └── cli_anything/
-│       └── streamcontroller/
-│           ├── streamcontroller_cli.py  # Click CLI entry point
-│           ├── core/                    # Business logic modules
-│           │   ├── config.py            # Data paths, deck models
-│           │   ├── pages.py             # Page file management
-│           │   ├── buttons.py           # Button editing
-│           │   ├── plugins.py           # Plugin inspection
-│           │   ├── devices.py           # Device info
-│           │   └── settings.py          # JSON settings CRUD
-│           ├── utils/
-│           │   └── output.py            # JSON/human output formatting
-│           └── tests/                   # 92 tests (unit + E2E)
-├── README.md
-└── LICENSE
-```
-
 ## Development
 
 ```bash
@@ -460,18 +368,16 @@ nix develop                          # enter dev shell, installs pre-commit hook
 nix fmt                              # format flake + module + hm-module
 nix flake check --no-build           # eval check
 nix build .#streamcontroller         # build the desktop app
+./result/bin/streamcontroller --help # binary verify
 nix build .#streamcontroller-cli     # build the offline CLI
-./result/bin/streamcontroller --help # binary verify (or run `streamcontroller-cli`)
 ```
-
-CI runs the same chain daily via `.github/workflows/update.yml`; manual updates rarely needed.
 
 <!-- BEGIN generated:options -->
 <!-- END generated:options -->
 
 ## License
 
-This packaging flake is [MIT](./LICENSE) licensed. Upstream StreamController is [GPL-3.0-only](https://github.com/StreamController/StreamController/blob/main/LICENSE) (the packaged derivations carry `meta.license = gpl3Only` accordingly).
+The [`LICENSE`](./LICENSE) file of this repository is MIT. Upstream StreamController is [GPL-3.0-only](https://github.com/StreamController/StreamController/blob/main/LICENSE), and [`package.nix`](./package.nix) marks the packaged application `gpl3Only` accordingly. [`cli/package.nix`](./cli/package.nix) marks the command-line tool `gpl3Only` as well.
 
 <!-- BEGIN generated:footer -->
 <!-- END generated:footer -->
